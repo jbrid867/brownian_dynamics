@@ -18,6 +18,7 @@ public:
 	void startNNs(double cut); // at phi=0.2, 25<NNs<50
 	void updateNNs(double cut);
 	void moveall(mt19937& gen, normal_distribution<> distro);
+	void upall();
 	 
 };
 #endif

@@ -12,6 +12,7 @@ using namespace std;
 brownsys::brownsys()
 {
 	crowds=false;
+	reaction=2;
 	Ncr=0;
 	double xx,yy,zz,mag,mag2; // dummies
 	srand (time(NULL));
@@ -33,7 +34,7 @@ brownsys::brownsys(int num)
 	
 	Ncr=num;
 	crowds=true;	
-	
+	reaction=2;
 	double xx,yy,zz,mag,mag2; // dummies
 	int u,v,w,ran;
 	double n=ceil(pow(num,1.0/3.0));
@@ -315,12 +316,22 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 {
 	double xx,yy,zz;
 	vector<double> center(dim);
-	// move central particle
+	// move central particle. DONT NECESSARILY DO THIS FIRST
 	center[0]=-1.0*distro(gen);
 	center[1]=-1.0*distro(gen);
 	center[2]=-1.0*distro(gen);
+	// move main and check for collision/escape
 	main.newpos(center);
-	for(int i=0;i<dim;i++){crowders[i].newpos(center);}
+	
+	if(main.chkcntr()){//check if collision happens first, if it doesnt
+		reaction=1;}
+	else if(main.chkesc()){reaction=0;}
+	// move crowders and resolve collisions
+	for(int i=0;i<Ncr;i++)
+	{
+		crowders[i].newpos(center);
+		if(crowders[i].chkcntr()){/*resolve*/}
+	}
 	
 	
 }

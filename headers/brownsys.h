@@ -11,6 +11,8 @@ private:
 	vector<protein> crowders;
 	bool crowds; 
 	int Ncr; //number of crowders
+	int steps; //number of steps taken
+	int reaction; // 0 for escape, one for reaction
 public:
 	brownsys(); // creates a brownian system with one protein
 	brownsys(int num); // creates brownian system with num crowders

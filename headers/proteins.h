@@ -24,11 +24,14 @@ public:
 	protein(double x,double y, double z, double ms, double rad, bool crow); 
 	//~protein(); //destructor
 	
-	//Dynamic 
+	//Dynamics
 	vector<double> getinfo(const char* a); // a = coords, new coords or velocity
 	void newpos(vector<double> pos); // sets newcoords
 	void update();
-	void PBC();
+	bool chkcntr(); //checks for collision with center
+	bool chkesc(); //checks for escape
+	void rescntr(); //resolves collision with center
+	
 	
 	//Parameters 
 	double  getmass();
@@ -40,8 +43,7 @@ public:
 	//incomplete
 	
 	
-	void move(mt19937& gen, normal_distribution<> distro); // updates coordinates and generates velocity
-	
+	void move(mt19937& gen, normal_distribution<> distro); 
 	
 	
 	

@@ -84,8 +84,63 @@ void protein::newpos(vector<double> pos)
 
 void protein::update()
 {
-	for(int i=0;i<dim;i++){coordinates[i]=newcoords[i];}
+	for(int i=0;i<dim;i++)
+	{
+		coordinates[i]=newcoords[i];
+		if(coordinates[i]>L){coordinates[i]-=2*L;}
+		else if(coordinates[i]<-1.0*L){coordinates[i]+=2*L;}
+	}
 
 }
+
+bool protein::chkcntr()
+{
+	bool col=false;
+	double xx,yy,zz,mag2,mag;
+	xx=newcoords[0];
+	yy=newcoords[1];
+	zz=newcoords[2];
+	mag2=xx*xx+yy*yy+zz*zz;
+	mag=pow(mag2,0.5);
+	if(mag<r+radius){col=true;}
+	return col;
+}
+
+bool protein::chkesc()
+{
+	bool esc=false;
+	double xx,yy,zz,mag2,mag;
+	xx=newcoords[0];
+	yy=newcoords[1];
+	zz=newcoords[2];
+	mag2=xx*xx+yy*yy+zz*zz;
+	mag=pow(mag2,0.5);
+	if(mag>q){esc=true;}
+	return esc;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	
