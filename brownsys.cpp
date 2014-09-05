@@ -26,6 +26,9 @@ brownsys::brownsys()
 	yy=b*yy/mag;
 	zz=b*zz/mag;
 	main = protein(xx,yy,zz,M,r,false);
+	for(int i=0;i<dim;i++){cvel.push_back(0);cpos.push_back(0);}
+	crad=r;
+	cmass=M;
 }
 
 //N protein system constructor
@@ -42,6 +45,10 @@ brownsys::brownsys(int num)
 	int dN=Np-num; // number of lattice points which should eventually not contain crowders
 	double l=2*L/n; // cubic lattice spacing
 	vector< int > rem(dN-1);
+
+	for(int i=0;i<dim;i++){cvel.push_back(0);cpos.push_back(0);}
+	crad=r;
+	cmass=M;
 
 	
 	//initiate random int generator
@@ -131,14 +138,14 @@ void brownsys::startNNs(double cut)
 	vector<int> nnns;
 	vector<double> dumby;
 	double xx, yy, zz, x, y, z,mag,mag2;
-	dumby=main.getinfo("coords");
+	dumby=main.getv("coords");
 	xx=dumby[0];yy=dumby[1];zz=dumby[2];
 	bool NN;	
 
 	for(int u=0; u<Ncr; u++)
 	{	
 		NN=false;
-		dumby=crowders[u].getinfo("coords");
+		dumby=crowders[u].getv("coords");
 		x=dumby[0];y=dumby[1];z=dumby[2];
 		mag2=(xx-x)*(xx-x)+(yy-y)+(zz-z)*(zz-z);
 		mag=pow(mag2,0.5);
@@ -196,7 +203,7 @@ void brownsys::updateNNs(double cut)
 	int index;
 	int index2;
 	//update main
-	pos1=main.getinfo("coords");
+	pos1=main.getv("coords");
 	NNs=main.getNNs(true);
 	nNNs=main.getNNs(false);
 	int NNnum=NNs.size();
@@ -210,7 +217,7 @@ void brownsys::updateNNs(double cut)
 		
 		if(index<Ncr)
 		{
-			pos2=crowders[index].getinfo("coords");
+			pos2=crowders[index].getv("coords");
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
 			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;}
@@ -218,7 +225,7 @@ void brownsys::updateNNs(double cut)
 		else if(index>=Ncr && index<2*Ncr) //-x border
 		{
 			index2=index-Ncr;
-			pos2=crowders[index2].getinfo("coords");
+			pos2=crowders[index2].getv("coords");
 			pos2[0]-=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
@@ -227,7 +234,7 @@ void brownsys::updateNNs(double cut)
 		else if(index>=2*Ncr && index<3*Ncr) //+x border
 		{
 			index2=index-2*Ncr;
-			pos2=crowders[index2].getinfo("coords");
+			pos2=crowders[index2].getv("coords");
 			pos2[0]+=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
@@ -236,7 +243,7 @@ void brownsys::updateNNs(double cut)
 		else if(index>=3*Ncr && index<4*Ncr) //-y border
 		{
 			index2=index-3*Ncr;
-			pos2=crowders[index2].getinfo("coords");
+			pos2=crowders[index2].getv("coords");
 			pos2[1]-=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
@@ -245,7 +252,7 @@ void brownsys::updateNNs(double cut)
 		else if(index>=4*Ncr && index<5*Ncr) //+y border
 		{
 			index2=index-4*Ncr;
-			pos2=crowders[index2].getinfo("coords");
+			pos2=crowders[index2].getv("coords");
 			pos2[1]+=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
@@ -254,7 +261,7 @@ void brownsys::updateNNs(double cut)
 		else if(index>=5*Ncr && index<6*Ncr) //-z border
 		{
 			index2=index-5*Ncr;
-			pos2=crowders[index2].getinfo("coords");
+			pos2=crowders[index2].getv("coords");
 			pos2[2]-=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
@@ -263,7 +270,7 @@ void brownsys::updateNNs(double cut)
 		else if(index>=6*Ncr && index<7*Ncr) //+z border
 		{
 			index2=index-6*Ncr;
-			pos2=crowders[index2].getinfo("coords");
+			pos2=crowders[index2].getv("coords");
 			pos2[2]+=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
@@ -276,7 +283,7 @@ void brownsys::updateNNs(double cut)
 	for(int i=0; i<nNNnum; i++) //CAN MAKE THIS BETTER BY LINKING PARTICLES FOR WHICH IVE ALREADY FOUND NNS
 	{
 		index=nNNs[i];
-		pos2=crowders[index].getinfo("coords");
+		pos2=crowders[index].getv("coords");
 		dx=pos1[0]-pos2[0];
 		dy=pos1[1]-pos2[1];
 		dz=pos1[2]-pos2[2];
@@ -314,23 +321,25 @@ void brownsys::updateNNs(double cut)
 
 void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 {
-	double xx,yy,zz;
+	double xx,yy,zz,v;
+	double v2=0;
 	vector<double> center(dim);
 	// move central particle. DONT NECESSARILY DO THIS FIRST
-	center[0]=-1.0*distro(gen);
-	center[1]=-1.0*distro(gen);
-	center[2]=-1.0*distro(gen);
-	// move main and check for collision/escape
-	main.newpos(center);
+	for(int i=0;i<dim;i++){center[i]=-1.0*distro(gen); cvel[i]=-1.0*center[i]/h; v2+=cvel[i]*cvel[i];}
 	
-	if(main.chkcntr()){//check if collision happens first, if it doesnt
-		reaction=1;}
-	else if(main.chkesc()){reaction=0;}
+	
+	// move main and check for collision/escape. definitely do this first
+	main.newpos(center);
+	//check NNs for collision
+	reaction=main.chkreac();
+	
+	
+	
 	// move crowders and resolve collisions
 	for(int i=0;i<Ncr;i++)
 	{
 		crowders[i].newpos(center);
-		if(crowders[i].chkcntr()){/*resolve*/}
+		if(crowders[i].chkcntr()){cout<<"COLLISION"<<endl;resolve(crowders[i]);} //INCOMPLETE, ideally should find shortest time to collision
 	}
 	
 	
@@ -342,6 +351,70 @@ void brownsys::upall()
 	for(int i=0;i<Ncr;i++){crowders[i].update();}
 }
 
+void brownsys::resolve(protein& one)
+{
+	one.resetpos();
+	double xy,yz,xz,xy2,xz2,yx2,yz2,zx2,zy2,rdcl2,rdcl,t,mag;
+	double vdr, v2, mag2, v1x, v2x, v0x = 0;
+	double r=one.getp("radius");
+	double m=one.getp("mass");
+	double R2=(r+crad)*(r+crad);
+	vector<double> pos=one.getv("coords");
+	vector<double> rhat(3),dr0(3),newvelc(3),newvel(3);
+	for(int i=0;i<dim;i++){vdr+=cvel[i]*pos[i]; v2+=cvel[i]*cvel[i];}
+
+	//not doesnt work for dim~=3
+	xy=2*pos[0]*pos[1]*cvel[0]*cvel[1];
+	yz=2*pos[2]*pos[1]*cvel[2]*cvel[1];
+	xz=2*pos[0]*pos[2]*cvel[0]*cvel[2];
+	xy2=cvel[0]*cvel[0]*pos[1]*pos[1];
+	xz2=cvel[0]*cvel[0]*pos[2]*pos[2];
+	yz2=cvel[1]*cvel[1]*pos[2]*pos[2];
+	yx2=cvel[1]*cvel[1]*pos[0]*pos[0];
+	zx2=cvel[2]*cvel[2]*pos[0]*pos[0];
+	zy2=cvel[2]*cvel[2]*pos[1]*pos[1];
+	
+	rdcl2=xy+xz+yz-xy2-xz2-yx2-yz2-zx2-zy2+R2*v2;
+	rdcl=pow(rdcl2,0.5);
+	cout<<"ttttt "<<rdcl2<<endl;
+	if(rdcl2>0)
+	{
+		t=(vdr-rdcl)/v2;
+		if(t<0){t=(vdr+rdcl)/v2;}
+	}
+	else{cout<<"bad time"<<endl;}
+	for(int i=0;i<dim;i++){cpos[i]+=cvel[i]*t;}
+	double t1=t-h;
+	
+	for(int i=0;i<3;i++){dr0[i]=pos[i]-cpos[i]; mag2+-dr0[i]*dr0[i];}
+	mag=pow(mag2,0.5);
+	for(int i=0;i<3;i++){rhat[i]=dr0[i]/mag; v0x+=rhat[i]*cvel[i];}
+	v2x=(2*cmass)/(cmass+m) * v0x;
+	v1x=(cmass-m)/(cmass+m) * v0x;
+	
+	for(int i=0;i<3;i++){cvel[i]+=(v1x-v0x)*rhat[i]; newvel[i]=v2x*rhat[i];}
+
+	// CHECK FOR SECONDARY COLLISIONS	
+	// 
+	// input newvel, ones initial coords, cvel
+	// 
+	//
+	////temp/////
+	one.newpos(newvel,t1);
+	for(int i=0;i<3;i++){cpos[i]+=cvel[i]*t1;}
+	one.update();
+		
+	//update positions after every collision is resolved ----->>>>> brownsys::shftcntr()
+	//presumably individual coordinates have been updated
+}
+
+void brownsys::shftcntr()
+{
+	main.newpos(cpos); // maybe work in a better check like check |cpos-> - main->|
+	reaction=main.chkreac();
+	for(int i=0;i<3;i++){crowders[i].newpos(cpos); cpos[i]=0;}
+}
+
 
 void brownsys::something()
 {
@@ -350,7 +423,7 @@ void brownsys::something()
 	cout<<test.size()<<endl;
 	vector<double> test1;
 	 
-	test1=crowders[1].getinfo("coords");
+	test1=crowders[1].getv("coords");
 	cout<<test1[0]<<" "<<test1[1]<<" "<<test1[2]<<endl;
 	
 

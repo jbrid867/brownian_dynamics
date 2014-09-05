@@ -19,30 +19,41 @@ private:
 	bool crowder; // tells if particle is a crowder.
 
 public:
+	
 	//CONSTRUCTOR
 	protein(); //default constructor. only contains mass and radius
 	protein(double x,double y, double z, double ms, double rad, bool crow); 
 	//~protein(); //destructor
 	
 	//Dynamics
-	vector<double> getinfo(const char* a); // a = coords, new coords or velocity
-	void newpos(vector<double> pos); // sets newcoords
+	
+	void move(mt19937& gen, normal_distribution<> distro);
+	void resetpos(); //sets newcoords=coords
+	void setpos(vector<double> pos); // sets newcoords = pos
+	void newpos(vector<double> pos); // changes newcoords newcoords
+	void newpos(vector<double> nvel, double dt); // 
 	void update();
-	bool chkcntr(); //checks for collision with center
-	void rescntr(); //resolves collision with center
+	int chkreac(); //checks for collision with center
+	bool chkcntr();
 	
 	
-	//Parameters 
-	double  getmass();
-	double getrad();
+	
+	//vector<double> resolve(vector<double> p2); //resolves collision with another protein
+	//vector<double> resolve(); //resolves collision with center
+	
+	
+	//Access 
+	vector<double> getv(const char* a); // coords, new coords, vel
+	double getp(const char* a); // mass, radius
+	
 	 
 	vector<int> getNNs(bool nn); //true=NNs, false=notNNs
 	void setNNs(vector<int> nns, vector<int> nnns); // sets NNs and notNNs
 
-	//incomplete
 	
 	
-	void move(mt19937& gen, normal_distribution<> distro); 
+	
+	
 	
 	
 	

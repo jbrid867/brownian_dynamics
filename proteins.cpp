@@ -19,7 +19,7 @@ protein::protein()
 protein::protein(double x,double y, double z, double ms, double rad, bool crow)
 {	
 	crowder=crow;
-	for(int i=0;i<dim;i++){coordinates.push_back(0); newcoords.push_back(0);}
+	for(int i=0;i<dim;i++){coordinates.push_back(0); newcoords.push_back(0);vel.push_back(0);}
 	coordinates[0]=x; newcoords[0]=x;
 	coordinates[1]=y; newcoords[1]=y;
 	coordinates[2]=z; newcoords[2]=z;
@@ -38,25 +38,26 @@ void protein::setNNs(vector<int> nns, vector<int> nnns)
 }
 
 
-vector<double> protein::getinfo(const char* a)
+vector<double> protein::getv(const char* a)
 {
 	if(a="coords"){return coordinates;}
 	else if(a="new coords"){return newcoords;}
 	else if(a="velocity"){return vel;}
+	else{cout<<a<<" is not a thing"<<endl; return vector<double>(3);}
+	
+	
 }
 
-
-
-
-
-double protein::getmass()
+double protein::getp(const char* a)
 {
-	return mass;
+	if(a="mass"){return mass;}
+	else if(a="radius"){return radius;}
+	else{cout<<a<<" is not a thing"<<endl; return 0;}
 }
-double protein::getrad()
-{
-	return radius;
-}
+
+
+
+
 vector<int> protein::getNNs(bool nn)
 {
 	if(nn){return NNs;}
@@ -72,7 +73,13 @@ void protein::move(mt19937& gen, normal_distribution<> distro)
 	zz=distro(gen);
 	newcoords[0]+=xx; vel[0]=xx/h;
 	newcoords[1]+=yy; vel[1]=yy/h;
-	newcoords[2]+=zz; vel[2]=zz/h;	
+	newcoords[2]+=zz; vel[2]=zz/h;
+	cout<<"move vel"<<vel[0]<<endl;	
+}
+
+void protein::resetpos()
+{
+	for(int i=0;i<dim;i++){newcoords[i]=coordinates[i];}
 }
 
 void protein::newpos(vector<double> pos)
@@ -80,6 +87,13 @@ void protein::newpos(vector<double> pos)
 	newcoords[0]+=pos[0];
 	newcoords[1]+=pos[1];
 	newcoords[2]+=pos[2];
+}
+
+void protein::newpos(vector<double> nvel, double dt)
+{
+	newcoords[0]+=nvel[0]*dt;
+	newcoords[1]+=nvel[1]*dt;
+	newcoords[2]+=nvel[2]*dt;
 }
 
 void protein::update()
@@ -91,6 +105,20 @@ void protein::update()
 		else if(coordinates[i]<-1.0*L){coordinates[i]+=2*L;}
 	}
 
+}
+
+int protein::chkreac()
+{
+	int reac=2;
+	double xx,yy,zz,mag2,mag;
+	xx=newcoords[0];
+	yy=newcoords[1];
+	zz=newcoords[2];
+	mag2=xx*xx+yy*yy+zz*zz;
+	mag=pow(mag2,0.5);
+	if(mag<r+radius){reac=1;}
+	else if(mag>q){reac=0;}
+	return reac;
 }
 
 bool protein::chkcntr()
@@ -106,20 +134,7 @@ bool protein::chkcntr()
 	return col;
 }
 
-bool protein::chkesc()
-{
-	bool esc=false;
-	double xx,yy,zz,mag2,mag;
-	xx=newcoords[0];
-	yy=newcoords[1];
-	zz=newcoords[2];
-	mag2=xx*xx+yy*yy+zz*zz;
-	mag=pow(mag2,0.5);
-	if(mag>q){esc=true;}
-	return esc;
-}
-
-
+	
 
 
 
