@@ -30,11 +30,12 @@ public:
 	void move(mt19937& gen, normal_distribution<> distro);
 	void resetpos(); //sets newcoords=coords
 	void setpos(vector<double> pos); // sets newcoords = pos
-	void newpos(vector<double> pos); // changes newcoords newcoords
-	void newpos(vector<double> nvel, double dt); // 
+	void newpos(vector<double> pos, string a); // adds newcoords + pos
+	void newpos(vector<double> nvel, double dt, string a); // adds newcoords + vel*dt
 	void update();
 	int chkreac(); //checks for collision with center
-	bool chkcntr();
+	bool chkcntr();	
+	bool chkcol(vector<double> pos2);
 	
 	
 	
@@ -43,8 +44,8 @@ public:
 	
 	
 	//Access 
-	vector<double> getv(const char* a); // coords, new coords, vel
-	double getp(const char* a); // mass, radius
+	vector<double> getv(string a); // coords, new coords, vel
+	double getp(string a); // mass, radius
 	
 	 
 	vector<int> getNNs(bool nn); //true=NNs, false=notNNs

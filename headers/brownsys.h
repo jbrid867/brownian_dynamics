@@ -9,6 +9,7 @@ class brownsys
 private:
 	protein main;
 	vector<protein> crowders;
+	vector<int> nearcntr; //stores indices of proteins near the center
 	bool crowds; 
 	int Ncr; //number of crowders
 	int steps; //number of steps taken
@@ -17,6 +18,7 @@ private:
 	vector<double> cpos; //center coords before shift
 	double crad;
 	double cmass;
+	double del_t; //goes from h -> 0 
 public:
 	brownsys(); // creates a brownian system with one protein
 	brownsys(int num); // creates brownian system with num crowders
@@ -28,8 +30,12 @@ public:
 
 	// Dynamics
 	void moveall(mt19937& gen, normal_distribution<> distro);
-	void resolve(protein& one); // resolves collisions with center
+	void resolvec(protein& two, double dt); // resolves collisions with center
 	void shftcntr(); 
+	void printcoords(protein test);
+	double coltime(protein one, protein two);
+	double coltime(protein two);
+	
 
 	// Access functions
 	void upall();

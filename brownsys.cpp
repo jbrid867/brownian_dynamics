@@ -321,28 +321,81 @@ void brownsys::updateNNs(double cut)
 
 void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 {
-	double xx,yy,zz,v;
+	cout<<"move"<<endl;
+	del_t=h;
+	bool col=false;
+	double xx,yy,zz,v,t1,t;
+	int index, index1;
 	double v2=0;
-	vector<double> center(dim);
 	// move central particle. DONT NECESSARILY DO THIS FIRST
-	for(int i=0;i<dim;i++){center[i]=-1.0*distro(gen); cvel[i]=-1.0*center[i]/h; v2+=cvel[i]*cvel[i];}
+	for(int i=0;i<dim;i++){cpos[i]=distro(gen); cvel[i]=cpos[i]/del_t; v2+=cvel[i]*cvel[i];}
 	
 	
 	// move main and check for collision/escape. definitely do this first
-	main.newpos(center);
-	//check NNs for collision
-	reaction=main.chkreac();
-	
-	
+	//main.newpos(cpos,"center");
+	reaction=main.chkreac(); // FIX THIS DAMMIT CKREAC(CPOS)
+	//main.update();
+	t=del_t+2;
 	
 	// move crowders and resolve collisions
 	for(int i=0;i<Ncr;i++)
 	{
-		crowders[i].newpos(center);
-		if(crowders[i].chkcntr()){cout<<"COLLISION"<<endl;resolve(crowders[i]);} //INCOMPLETE, ideally should find shortest time to collision
+		
+		//crowders[i].newpos(cpos, "center");
+		if(crowders[i].chkcntr(cpos))
+		{
+			col=true;
+			cout<<"COLLISION"<<endl;
+			index1=i;
+			t1=coltime(crowders[i]);
+			if(t1<t){t=t1; index=index1;}
+		}
+			
+			
+		 //INCOMPLETE, ideally should only use crowder coords near center
+	}
+	if(col)
+	{
+		main.newpos(cvel, t,"center"); 
+		
+		for(int i=0;i<Ncr;i++)
+		{
+			crowders[i].newpos(cvel, t, "center");
+		}
+		resolvec(crowders[index],t);
+		main.newpos(cpos, "center");
+		for(int i=0;i<Ncr;i++)
+		{
+			crowders[i].newpos(cpos, "center");
+		}
 	}
 	
 	
+	
+}
+
+void brownsys::resolvec(protein& two, double dt)
+{
+	vector<double> dr0(3), newvel(3), newpos2(3), rhat(3);
+	vector<double> pos2=two.getv("new coords");
+	double mag, mag2, v1x, v2x, v0x=0;
+	double r=two.getp("radius");
+	double m=two.getp("mass");
+	double R2=(r+crad)*(r+crad);
+	for(int i=0;i<3;i++){dr0[i]=pos2[i]-cpos[i]; mag2+=dr0[i]*dr0[i];}
+	mag=pow(mag2,0.5);
+	for(int i=0;i<3;i++){rhat[i]=dr0[i]/mag; v0x+=rhat[i]*cvel[i];}
+	v2x=(2*cmass)/(cmass+m) * v0x;
+	v1x=(cmass-m)/(cmass+m) * v0x;
+	for(int i=0;i<3;i++)
+	{	
+		cvel[i]+=(v1x-v0x)*rhat[i]; 
+		newvel[i]=v2x*rhat[i];
+		cpos[i]=cvel[i]*(del_t-dt);
+		two.newpos(newvel, del_t-dt, "normal");
+	}
+		
+
 }
 
 void brownsys::upall()
@@ -350,11 +403,12 @@ void brownsys::upall()
 	main.update();
 	for(int i=0;i<Ncr;i++){crowders[i].update();}
 }
-
-void brownsys::resolve(protein& one)
+/*
+void brownsys::resolvec(protein& one)
 {
+	
 	one.resetpos();
-	double xy,yz,xz,xy2,xz2,yx2,yz2,zx2,zy2,rdcl2,rdcl,t,mag;
+	double xy,yz,xz,xy2,xz2,yx2,yz2,zx2,zy2,rdcl2,rdcl,tm,tp,mag,t;
 	double vdr, v2, mag2, v1x, v2x, v0x = 0;
 	double r=one.getp("radius");
 	double m=one.getp("mass");
@@ -362,6 +416,7 @@ void brownsys::resolve(protein& one)
 	vector<double> pos=one.getv("coords");
 	vector<double> rhat(3),dr0(3),newvelc(3),newvel(3);
 	for(int i=0;i<dim;i++){vdr+=cvel[i]*pos[i]; v2+=cvel[i]*cvel[i];}
+	
 
 	//not doesnt work for dim~=3
 	xy=2*pos[0]*pos[1]*cvel[0]*cvel[1];
@@ -373,20 +428,31 @@ void brownsys::resolve(protein& one)
 	yx2=cvel[1]*cvel[1]*pos[0]*pos[0];
 	zx2=cvel[2]*cvel[2]*pos[0]*pos[0];
 	zy2=cvel[2]*cvel[2]*pos[1]*pos[1];
+	for(int i=0;i<3;i++)
+	{
+		cout<<i<<"coord="<<pos[i]<<", vel="<<cvel[i]<<endl;
+	}	
 	
 	rdcl2=xy+xz+yz-xy2-xz2-yx2-yz2-zx2-zy2+R2*v2;
 	rdcl=pow(rdcl2,0.5);
-	cout<<"ttttt "<<rdcl2<<endl;
 	if(rdcl2>0)
 	{
-		t=(vdr-rdcl)/v2;
-		if(t<0){t=(vdr+rdcl)/v2;}
+		tm=(vdr-rdcl)/v2;
+		cout<<"t minus = "<<tm<<endl;
+		tp=(vdr+rdcl)/v2;
+		cout<<"t plus = "<<tp<<endl;
+		if(tm<tp && tm>0){t=tm;}
+		else if(tp<tm && tp>0){t=tp;}
+		else{cout<<"negative time"<<endl;}
+		if(t>del_t){cout<<"too long"<<endl;}	
+		
 	}
-	else{cout<<"bad time"<<endl;}
-	for(int i=0;i<dim;i++){cpos[i]+=cvel[i]*t;}
-	double t1=t-h;
+	else{cout<<"complex time"<<endl;}
+	cout<<"t = "<<t<<endl;
+	for(int i=0;i<dim;i++){cpos[i]=cvel[i]*t;}
+	double t1=del_t-t;
 	
-	for(int i=0;i<3;i++){dr0[i]=pos[i]-cpos[i]; mag2+-dr0[i]*dr0[i];}
+	for(int i=0;i<3;i++){dr0[i]=pos[i]-cpos[i]; mag2+=dr0[i]*dr0[i];}
 	mag=pow(mag2,0.5);
 	for(int i=0;i<3;i++){rhat[i]=dr0[i]/mag; v0x+=rhat[i]*cvel[i];}
 	v2x=(2*cmass)/(cmass+m) * v0x;
@@ -395,24 +461,75 @@ void brownsys::resolve(protein& one)
 	for(int i=0;i<3;i++){cvel[i]+=(v1x-v0x)*rhat[i]; newvel[i]=v2x*rhat[i];}
 
 	// CHECK FOR SECONDARY COLLISIONS	
-	// 
-	// input newvel, ones initial coords, cvel
-	// 
+	one.newpos(newvel,t1,"crowder"); 
+	// check NNs
+	// resolve any secondary collisions
 	//
-	////temp/////
-	one.newpos(newvel,t1);
+	
 	for(int i=0;i<3;i++){cpos[i]+=cvel[i]*t1;}
-	one.update();
+	del_t=t1;
+	
+	//assume only 1 collision for now
 		
 	//update positions after every collision is resolved ----->>>>> brownsys::shftcntr()
 	//presumably individual coordinates have been updated
+}*/
+
+double brownsys::coltime(protein two)
+{
+	//two.resetpos();
+	double xy,yz,xz,xy2,xz2,yx2,yz2,zx2,zy2,rdcl2,rdcl,tm,tp,mag,t;
+	double vdr, v2, mag2, v1x, v2x, v0x = 0;
+	double r=two.getp("radius");
+	double m=two.getp("mass");
+	double R2=(r+crad)*(r+crad);
+	vector<double> pos=two.getv("coords");
+	vector<double> rhat(3),dr0(3),newvelc(3),newvel(3);
+	for(int i=0;i<dim;i++){vdr+=cvel[i]*pos[i]; v2+=cvel[i]*cvel[i];}
+	
+
+	//not doesnt work for dim~=3
+	xy=2*pos[0]*pos[1]*cvel[0]*cvel[1];
+	yz=2*pos[2]*pos[1]*cvel[2]*cvel[1];
+	xz=2*pos[0]*pos[2]*cvel[0]*cvel[2];
+	xy2=cvel[0]*cvel[0]*pos[1]*pos[1];
+	xz2=cvel[0]*cvel[0]*pos[2]*pos[2];
+	yz2=cvel[1]*cvel[1]*pos[2]*pos[2];
+	yx2=cvel[1]*cvel[1]*pos[0]*pos[0];
+	zx2=cvel[2]*cvel[2]*pos[0]*pos[0];
+	zy2=cvel[2]*cvel[2]*pos[1]*pos[1];
+	for(int i=0;i<3;i++)
+	{
+		cout<<i<<"coord="<<pos[i]<<", vel="<<cvel[i]<<endl;
+	}	
+	
+	rdcl2=xy+xz+yz-xy2-xz2-yx2-yz2-zx2-zy2+R2*v2;
+	rdcl=pow(rdcl2,0.5);
+	if(rdcl2>0)
+	{
+		tm=(vdr-rdcl)/v2;
+		cout<<"t minus = "<<tm<<endl;
+		tp=(vdr+rdcl)/v2;
+		cout<<"t plus = "<<tp<<endl;
+		if(tm<tp && tm>0){t=tm;}
+		else if(tp<tm && tp>0){t=tp;}
+		else{cout<<"negative time"<<endl;}
+		if(t>del_t){cout<<"too long"<<endl;}	
+		
+	}
+	else{cout<<"complex time"<<endl;}
+	cout<<"t = "<<t<<endl;
+	return t;
 }
+
+
 
 void brownsys::shftcntr()
 {
-	main.newpos(cpos); // maybe work in a better check like check |cpos-> - main->|
+	main.newpos(cpos, "center"); // maybe work in a better check like check |cpos-> - main->|
 	reaction=main.chkreac();
-	for(int i=0;i<3;i++){crowders[i].newpos(cpos); cpos[i]=0;}
+	for(int i=0;i<Ncr;i++){crowders[i].newpos(cpos, "center");}
+	for(int i=0;i<3;i++){cpos[i]=0;}
 }
 
 
@@ -430,8 +547,14 @@ void brownsys::something()
 }	
 
 
-
-
+void brownsys::printcoords(protein test)
+{
+	vector<double> pos(3);
+	pos=test.getv("new coords");
+	cout<<"x= "<<pos[0]<<endl;
+	cout<<"y= "<<pos[1]<<endl;
+	cout<<"z= "<<pos[2]<<endl;	
+}
 
 
 	

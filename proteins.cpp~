@@ -38,20 +38,20 @@ void protein::setNNs(vector<int> nns, vector<int> nnns)
 }
 
 
-vector<double> protein::getv(const char* a)
+vector<double> protein::getv(string a)
 {
-	if(a="coords"){return coordinates;}
-	else if(a="new coords"){return newcoords;}
-	else if(a="velocity"){return vel;}
+	if(a=="coords"){return coordinates;}
+	else if(a=="new coords"){return newcoords;}
+	else if(a=="velocity"){return vel;}
 	else{cout<<a<<" is not a thing"<<endl; return vector<double>(3);}
 	
 	
 }
 
-double protein::getp(const char* a)
+double protein::getp(string a)
 {
-	if(a="mass"){return mass;}
-	else if(a="radius"){return radius;}
+	if(a=="mass"){return mass;}
+	else if(a=="radius"){return radius;}
 	else{cout<<a<<" is not a thing"<<endl; return 0;}
 }
 
@@ -82,18 +82,21 @@ void protein::resetpos()
 	for(int i=0;i<dim;i++){newcoords[i]=coordinates[i];}
 }
 
-void protein::newpos(vector<double> pos)
+void protein::newpos(vector<double> pos, string a)
 {
-	newcoords[0]+=pos[0];
-	newcoords[1]+=pos[1];
-	newcoords[2]+=pos[2];
+	//if a="center"
+	newcoords[0]-=pos[0];
+	newcoords[1]-=pos[1];
+	newcoords[2]-=pos[2];
 }
 
-void protein::newpos(vector<double> nvel, double dt)
+void protein::newpos(vector<double> nvel, double dt, string a)
 {
-	newcoords[0]+=nvel[0]*dt;
-	newcoords[1]+=nvel[1]*dt;
-	newcoords[2]+=nvel[2]*dt;
+	if(a=="center"){
+	newcoords[0]-=nvel[0]*dt;
+	newcoords[1]-=nvel[1]*dt;
+	newcoords[2]-=nvel[2]*dt;}
+	else{for(int i=0; i<3; i++){newcoords[i]+=nvel[i]*dt;}}
 }
 
 void protein::update()
@@ -123,20 +126,30 @@ int protein::chkreac()
 
 bool protein::chkcntr()
 {
-	bool esc=false;
+	bool col=false;
 	double xx,yy,zz,mag2,mag;
 	xx=newcoords[0];
 	yy=newcoords[1];
 	zz=newcoords[2];
 	mag2=xx*xx+yy*yy+zz*zz;
 	mag=pow(mag2,0.5);
-	if(mag<r+radius){esc=true;}
-	return esc;
+	if(mag<r+radius){col=true;}
+	return col;
 }
 
-	
-
-
+bool protein::chkcol(vector<double> pos2)
+{
+	bool col=false;
+		
+	double xx,yy,zz,mag2,mag;
+	xx=pos2[0]-newcoords[0];
+	yy=pos2[1]-newcoords[1];
+	zz=pos2[2]-newcoords[2];
+	mag2=xx*xx+yy*yy+zz*zz;
+	mag=pow(mag2,0.5);
+	if(mag<r+radius){col=true;}
+	return col;
+}
 
 
 

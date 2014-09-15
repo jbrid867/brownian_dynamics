@@ -6,11 +6,11 @@ int main(){
 	normal_distribution<> distro(0,pow(2*D*h,0.5));
 	brownsys baller(N);
 	baller.startNNs(4*r);
-	for(int i=0;i<10;i++){baller.moveall(gen,distro);baller.shftcntr();}
+	for(int i=0;i<20;i++){baller.moveall(gen,distro);baller.upall();}
 	//shftcntr(baller); // seems clunky
-	baller.upall(); // integrate with moveall eventually
-	baller.something();
-	baller.updateNNs(4*r);
+	 // integrate with moveall eventually
+	//baller.something();
+	//baller.updateNNs(4*r);
 	
 	 
 	
