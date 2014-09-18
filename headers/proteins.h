@@ -33,7 +33,7 @@ public:
 	void newpos(vector<double> pos, string a); // adds newcoords + pos
 	void newpos(vector<double> nvel, double dt, string a); // adds newcoords + vel*dt
 	void update();
-	int chkreac(); //checks for collision with center
+	bool chkreac(vector<double> center); //checks for collision with center
 	bool chkcntr(vector<double> center);	
 	bool chkcol(vector<double> pos2);
 	

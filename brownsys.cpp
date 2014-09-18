@@ -323,21 +323,34 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 {
 	cout<<"move"<<endl;
 	del_t=h;
-	bool col=false;
+	bool col, resolved = false;
 	double xx,yy,zz,v,t1,t;
 	int index, index1;
-	double v2=0;
+	double v2, reactime=0;
+	
 	// move central particle. DONT NECESSARILY DO THIS FIRST
 	for(int i=0;i<dim;i++){cpos[i]=distro(gen); cvel[i]=cpos[i]/del_t; v2+=cvel[i]*cvel[i];}
 	
 	
 	// move main and check for collision/escape. definitely do this first
 	//main.newpos(cpos,"center");
-	reaction=main.chkreac(); // FIX THIS DAMMIT CKREAC(CPOS)
-	//main.update();
-	t=del_t+2;
 	
+	
+	t=del_t+2;
+	reactime=del_t+2;
 	// move crowders and resolve collisions
+	while(!resolved){
+	col=false;
+
+	if(main.chkreac(cpos))
+	{
+		reaction=true;
+		cout<<"Potential reaction"<<endl;
+		t=coltime(main);
+		reactime=t;
+	}
+	
+	
 	for(int i=0;i<Ncr;i++)
 	{
 		
@@ -345,39 +358,62 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 		if(crowders[i].chkcntr(cpos))
 		{
 			col=true;
-			cout<<"COLLISION"<<endl;
+			cout<<"COLLISION "<<i<<endl;
 			index1=i;
 			t1=coltime(crowders[i]);
-			if(t1<t){t=t1; index=index1;}
+			if(t1<t){t=t1; index=index1; reaction=false;}
 		}
 			
 			
-		 //INCOMPLETE, ideally should only use crowder coords near center
-	}
-	if(col)
+		
+	} // end find collision for
+	if(col && t<reactime)
 	{
 		main.newpos(cvel, t,"center"); 
 		
 		for(int i=0;i<Ncr;i++)
 		{
 			crowders[i].newpos(cvel, t, "center");
+			crowders[i].update();
 		}
-		resolvec(crowders[index],t);
+		resolvec(crowders[index],t); // check secondary co
 		main.newpos(cpos, "center");
 		for(int i=0;i<Ncr;i++)
 		{
 			crowders[i].newpos(cpos, "center");
 		}
+		cout<<"collision resolved "<<index<<endl;
 	}
+	else if(reaction)
+	{
+		cout<<"reaction"<<endl;
+		// throw end simulation flag
+		resolved=true;
+	}
+	else
+	{
+		main.newpos(cpos, "center");
+		for(int i=0; i<Ncr; i++)
+		{
+			crowders[i].newpos(cpos, "center");
+		}
+		cout<<"all collisions resolved"<<endl;
+		resolved=true;
+	}//end else
 	
+	}//end while
 	
 	
 }
 
 void brownsys::resolvec(protein& two, double dt)
 {
-	vector<double> dr0(3), newvel(3), newpos2(3), rhat(3);
-	vector<double> pos2=two.getv("new coords");
+	// Need to add secondary collisions of crowder somehow. 
+	// Give crowders velocity, check outside of the resolve function. dont update coordinates in resolvec. Check for another collision, 
+	
+
+	vector<double> dr0(3), newvel(3), rhat(3);
+	vector<double> pos2=two.getv("coords");
 	double mag, mag2, v1x, v2x, v0x=0;
 	double r=two.getp("radius");
 	double m=two.getp("mass");
@@ -394,86 +430,10 @@ void brownsys::resolvec(protein& two, double dt)
 		cpos[i]=cvel[i]*(del_t-dt);
 		two.newpos(newvel, del_t-dt, "normal");
 	}
-		
+	del_t-=dt;	
 
 }
 
-void brownsys::upall()
-{
-	main.update();
-	for(int i=0;i<Ncr;i++){crowders[i].update();}
-}
-/*
-void brownsys::resolvec(protein& one)
-{
-	
-	one.resetpos();
-	double xy,yz,xz,xy2,xz2,yx2,yz2,zx2,zy2,rdcl2,rdcl,tm,tp,mag,t;
-	double vdr, v2, mag2, v1x, v2x, v0x = 0;
-	double r=one.getp("radius");
-	double m=one.getp("mass");
-	double R2=(r+crad)*(r+crad);
-	vector<double> pos=one.getv("coords");
-	vector<double> rhat(3),dr0(3),newvelc(3),newvel(3);
-	for(int i=0;i<dim;i++){vdr+=cvel[i]*pos[i]; v2+=cvel[i]*cvel[i];}
-	
-
-	//not doesnt work for dim~=3
-	xy=2*pos[0]*pos[1]*cvel[0]*cvel[1];
-	yz=2*pos[2]*pos[1]*cvel[2]*cvel[1];
-	xz=2*pos[0]*pos[2]*cvel[0]*cvel[2];
-	xy2=cvel[0]*cvel[0]*pos[1]*pos[1];
-	xz2=cvel[0]*cvel[0]*pos[2]*pos[2];
-	yz2=cvel[1]*cvel[1]*pos[2]*pos[2];
-	yx2=cvel[1]*cvel[1]*pos[0]*pos[0];
-	zx2=cvel[2]*cvel[2]*pos[0]*pos[0];
-	zy2=cvel[2]*cvel[2]*pos[1]*pos[1];
-	for(int i=0;i<3;i++)
-	{
-		cout<<i<<"coord="<<pos[i]<<", vel="<<cvel[i]<<endl;
-	}	
-	
-	rdcl2=xy+xz+yz-xy2-xz2-yx2-yz2-zx2-zy2+R2*v2;
-	rdcl=pow(rdcl2,0.5);
-	if(rdcl2>0)
-	{
-		tm=(vdr-rdcl)/v2;
-		cout<<"t minus = "<<tm<<endl;
-		tp=(vdr+rdcl)/v2;
-		cout<<"t plus = "<<tp<<endl;
-		if(tm<tp && tm>0){t=tm;}
-		else if(tp<tm && tp>0){t=tp;}
-		else{cout<<"negative time"<<endl;}
-		if(t>del_t){cout<<"too long"<<endl;}	
-		
-	}
-	else{cout<<"complex time"<<endl;}
-	cout<<"t = "<<t<<endl;
-	for(int i=0;i<dim;i++){cpos[i]=cvel[i]*t;}
-	double t1=del_t-t;
-	
-	for(int i=0;i<3;i++){dr0[i]=pos[i]-cpos[i]; mag2+=dr0[i]*dr0[i];}
-	mag=pow(mag2,0.5);
-	for(int i=0;i<3;i++){rhat[i]=dr0[i]/mag; v0x+=rhat[i]*cvel[i];}
-	v2x=(2*cmass)/(cmass+m) * v0x;
-	v1x=(cmass-m)/(cmass+m) * v0x;
-	
-	for(int i=0;i<3;i++){cvel[i]+=(v1x-v0x)*rhat[i]; newvel[i]=v2x*rhat[i];}
-
-	// CHECK FOR SECONDARY COLLISIONS	
-	one.newpos(newvel,t1,"crowder"); 
-	// check NNs
-	// resolve any secondary collisions
-	//
-	
-	for(int i=0;i<3;i++){cpos[i]+=cvel[i]*t1;}
-	del_t=t1;
-	
-	//assume only 1 collision for now
-		
-	//update positions after every collision is resolved ----->>>>> brownsys::shftcntr()
-	//presumably individual coordinates have been updated
-}*/
 
 double brownsys::coltime(protein two)
 {
@@ -511,8 +471,8 @@ double brownsys::coltime(protein two)
 		cout<<"t minus = "<<tm<<endl;
 		tp=(vdr+rdcl)/v2;
 		cout<<"t plus = "<<tp<<endl;
-		if(tm<tp && tm>0){t=tm;}
-		else if(tp<tm && tp>0){t=tp;}
+		if(tm>0){t=tm;}
+		else if(tp>0){t=tp;}
 		else{cout<<"negative time"<<endl;}
 		if(t>del_t){cout<<"too long"<<endl;}	
 		
@@ -524,12 +484,11 @@ double brownsys::coltime(protein two)
 
 
 
-void brownsys::shftcntr()
+
+void brownsys::upall()
 {
-	main.newpos(cpos, "center"); // maybe work in a better check like check |cpos-> - main->|
-	reaction=main.chkreac();
-	for(int i=0;i<Ncr;i++){crowders[i].newpos(cpos, "center");}
-	for(int i=0;i<3;i++){cpos[i]=0;}
+	main.update();
+	for(int i=0;i<Ncr;i++){crowders[i].update();}
 }
 
 
@@ -550,11 +509,18 @@ void brownsys::something()
 void brownsys::printcoords(protein test)
 {
 	vector<double> pos(3);
-	pos=test.getv("new coords");
+	pos=test.getv("coords");
 	cout<<"x= "<<pos[0]<<endl;
 	cout<<"y= "<<pos[1]<<endl;
 	cout<<"z= "<<pos[2]<<endl;	
 }
 
 
+/*void brownsys::shftcntr()
+{
+	main.newpos(cpos, "center"); // maybe work in a better check like check |cpos-> - main->|
+	reaction=main.chkreac();
+	for(int i=0;i<Ncr;i++){crowders[i].newpos(cpos, "center");}
+	for(int i=0;i<3;i++){cpos[i]=0;}
+}*/
 	
