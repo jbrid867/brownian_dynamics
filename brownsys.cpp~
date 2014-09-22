@@ -12,7 +12,7 @@ using namespace std;
 brownsys::brownsys()
 {
 	crowds=false;
-	reaction=2;
+	reaction=false;
 	Ncr=0;
 	double xx,yy,zz,mag,mag2; // dummies
 	srand (time(NULL));
@@ -37,7 +37,7 @@ brownsys::brownsys(int num)
 	
 	Ncr=num;
 	crowds=true;	
-	reaction=2;
+	reaction=false;
 	double xx,yy,zz,mag,mag2; // dummies
 	int u,v,w,ran;
 	double n=ceil(pow(num,1.0/3.0));
@@ -133,7 +133,8 @@ brownsys::brownsys(int num)
 
 // need getr function for protein class
 void brownsys::startNNs(double cut)
-{if(crowds){
+{
+	
 	vector<int> nns;
 	vector<int> nnns;
 	vector<double> dumby;
@@ -144,11 +145,21 @@ void brownsys::startNNs(double cut)
 
 	for(int u=0; u<Ncr; u++)
 	{	
+		dumby=crowders[u].getv("coords");
+		x=dumby[0];y=dumby[1];z=dumby[2];
+		mag2=x*x+y*y+z*z;
+		mag=pow(mag2,0.5);
+		if(mag<cut){nearcntr.push_back(u);}		
+		
+
 		NN=false;
 		dumby=crowders[u].getv("coords");
 		x=dumby[0];y=dumby[1];z=dumby[2];
 		mag2=(xx-x)*(xx-x)+(yy-y)+(zz-z)*(zz-z);
 		mag=pow(mag2,0.5);
+		
+		// CAN IMPROVE THIS BY NESTING ELSE		
+
 		if(mag<cut){nns.push_back(u);NN=true;}
 		x-=2*L;
 		mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
@@ -176,11 +187,54 @@ void brownsys::startNNs(double cut)
 		if(mag<cut){nns.push_back(u+6*Ncr);NN=true;}
 		if(!NN){nnns.push_back(u);}
 	}
+	cout<<nearcntr.size()<<endl;
 	
 	main.setNNs(nns, nnns);
 	
+	for(int u=0; u<Ncr; u++) //can improve by linking. UNFINISHED
+	{
+		vector<int> nns;
+		vector<int> nnns;
+		dumby=crowders[u].getv("coords");
+		xx=dumby[0];yy=dumby[1];zz=dumby[2];
+		for(int v=0; v<Ncr; v++)
+		{if(u!=v)
+		{
+			dumby=crowders[v].getv("coords");
+			x=dumby[0];y=dumby[1];z=dumby[2];
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+
+			if(mag<cut){nns.push_back(u);NN=true;}
+			x-=2*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+Ncr);NN=true;}
+			x+=2*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+2*Ncr);NN=true;}
+			y-=2*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+3*Ncr);NN=true;}
+			y+=2*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+4*Ncr);NN=true;}
+			z-=2*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+5*Ncr);NN=true;}
+			z+=2*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+6*Ncr);NN=true;}
+			if(!NN){nnns.push_back(u);}
+		}			
+		}
+	}
 	
-	
 
 
 
@@ -191,13 +245,13 @@ void brownsys::startNNs(double cut)
 
 
 
-}}// ends function and big if
+}// ends function
 
 
 void brownsys::updateNNs(double cut)
 {
 	vector<double> pos1, pos2;
-	double dx,dy,dz,mag2,mag;
+	double dx,dy,dz,mag2,mag,xx,yy,zz;
 	vector<int> NNs;
 	vector<int> nNNs;
 	int index;
@@ -207,8 +261,51 @@ void brownsys::updateNNs(double cut)
 	NNs=main.getNNs(true);
 	nNNs=main.getNNs(false);
 	int NNnum=NNs.size();
+	int cnum=nearcntr.size();
 	int nNNnum=nNNs.size();
+	cout<<"cnum = "<<cnum<<endl;
+	if(cnum!=0)
+	{int i=0;
+	while(i<cnum)
+	{	
+		pos2=crowders[nearcntr[i]].getv("coords");
+		xx=pos2[0];yy=pos2[1];zz=pos2[2];
+		mag2=xx*xx+yy*yy+zz*zz;
+		mag=pow(mag2,0.5);
+		if(mag>cut){nearcntr.erase(nearcntr.begin()+i);cnum-=1;}
+		else{i++;}
+	}
+	sort (nearcntr.begin(),nearcntr.end());
+	}
 	
+	cnum=nearcntr.size();
+	
+	int count=0;
+	for(int i=0;i<Ncr;i++)
+	{
+		if(cnum==0)
+		{
+			
+			pos2=crowders[i].getv("coords");
+			mag2=pos2[0]*pos2[0]+pos2[1]*pos2[1]+pos2[2]*pos2[2];
+			mag=pow(mag2,0.5);
+			if(mag<cut){nearcntr.push_back(i);}
+		}
+		else if(i != nearcntr[count])
+		{
+			pos2=crowders[i].getv("coords");
+			mag2=pos2[0]*pos2[0]+pos2[1]*pos2[1]+pos2[2]*pos2[2];
+			mag=pow(mag2,0.5);
+			if(mag<cut){nearcntr.push_back(i);}
+		}
+		else
+		{
+			count++;
+			if(count==cnum){cnum=0;}
+		}	
+	}
+	
+
 	
 	for(int i=0; i<NNnum; i++)
 	{
@@ -350,24 +447,24 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 		reactime=t;
 	}
 	
-	
-	for(int i=0;i<Ncr;i++)
+	if(nearcntr.size()!=0){
+	for(int i=0;i<nearcntr.size();i++)
 	{
 		
 		//crowders[i].newpos(cpos, "center");
-		if(crowders[i].chkcntr(cpos))
+		if(crowders[nearcntr[i]].chkcntr(cpos))
 		{
 			col=true;
 			cout<<"COLLISION "<<i<<endl;
 			index1=i;
-			t1=coltime(crowders[i]);
+			t1=coltime(crowders[nearcntr[i]]);
 			if(t1<t){t=t1; index=index1; reaction=false;}
 		}
 			
 			
 		
-	} // end find collision for
-	if(col && t<reactime)
+	}} // end find collision for and near center if
+	if(col && !reaction)
 	{
 		main.newpos(cvel, t,"center"); 
 		
@@ -376,7 +473,7 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 			crowders[i].newpos(cvel, t, "center");
 			crowders[i].update();
 		}
-		resolvec(crowders[index],t);
+		resolvec(crowders[index],t); // check secondary co
 		main.newpos(cpos, "center");
 		for(int i=0;i<Ncr;i++)
 		{
@@ -408,6 +505,10 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 
 void brownsys::resolvec(protein& two, double dt)
 {
+	// Need to add secondary collisions of crowder somehow. 
+	// Give crowders velocity, check outside of the resolve function. dont update coordinates in resolvec. Check for another collision, 
+	
+
 	vector<double> dr0(3), newvel(3), rhat(3);
 	vector<double> pos2=two.getv("coords");
 	double mag, mag2, v1x, v2x, v0x=0;
@@ -454,10 +555,10 @@ double brownsys::coltime(protein two)
 	yx2=cvel[1]*cvel[1]*pos[0]*pos[0];
 	zx2=cvel[2]*cvel[2]*pos[0]*pos[0];
 	zy2=cvel[2]*cvel[2]*pos[1]*pos[1];
-	for(int i=0;i<3;i++)
+	/*for(int i=0;i<3;i++)
 	{
 		cout<<i<<"coord="<<pos[i]<<", vel="<<cvel[i]<<endl;
-	}	
+	}*/	
 	
 	rdcl2=xy+xz+yz-xy2-xz2-yx2-yz2-zx2-zy2+R2*v2;
 	rdcl=pow(rdcl2,0.5);
@@ -510,6 +611,8 @@ void brownsys::printcoords(protein test)
 	cout<<"y= "<<pos[1]<<endl;
 	cout<<"z= "<<pos[2]<<endl;	
 }
+
+
 
 
 /*void brownsys::shftcntr()

@@ -1,12 +1,17 @@
 #include "headers/brownsys.h"
 
 int main(){
+	double cutoff=4*r;
+	cout<<"numcrowd = "<<N<<endl;
 	random_device rd; // Seed RNG
 	mt19937 gen(rd()); // start RNG
 	normal_distribution<> distro(0,pow(2*D*h,0.5));
 	brownsys baller(N);
-	baller.startNNs(4*r);
-	for(int i=0;i<5;i++){baller.moveall(gen,distro);}
+	baller.startNNs(cutoff); // NOT FINISHED. ONLY FINDS IF ITS NEAR MAIN
+	for(int i=0;i<1;i++){baller.moveall(gen,distro); baller.updateNNs(cutoff);}
+
+
+
 	//shftcntr(baller); // seems clunky
 	 // integrate with moveall eventually
 	//baller.something();

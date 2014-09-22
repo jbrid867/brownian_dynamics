@@ -13,7 +13,7 @@ private:
 	bool crowds; 
 	int Ncr; //number of crowders
 	int steps; //number of steps taken
-	bool reaction; // 0 for escape, one for reaction
+	bool reaction; // true if there is a reaction
 	vector<double> cvel; //center velocity
 	vector<double> cpos; //center coords before shift
 	double crad;
@@ -35,6 +35,8 @@ public:
 	void printcoords(protein test);
 	double coltime(protein one, protein two);
 	double coltime(protein two);
+
+	bool sorter(int i, int j);
 	
 
 	// Access functions

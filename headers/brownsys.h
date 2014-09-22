@@ -35,6 +35,8 @@ public:
 	void printcoords(protein test);
 	double coltime(protein one, protein two);
 	double coltime(protein two);
+
+	
 	
 
 	// Access functions

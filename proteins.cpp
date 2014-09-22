@@ -96,7 +96,7 @@ void protein::newpos(vector<double> nvel, double dt, string a)
 	coordinates[0]-=nvel[0]*dt;
 	coordinates[1]-=nvel[1]*dt;
 	coordinates[2]-=nvel[2]*dt;}
-	else{for(int i=0; i<3; i++){newcoords[i]+=nvel[i]*dt;}}
+	else{for(int i=0; i<3; i++){coordinates[i]+=nvel[i]*dt;}}
 }
 
 void protein::update()
@@ -113,9 +113,9 @@ bool protein::chkreac(vector<double> center)
 {
 	bool reac=false;
 	double xx,yy,zz,mag2,mag;
-	xx=newcoords[0]-center[0];
-	yy=newcoords[1]-center[1];
-	zz=newcoords[2]-center[2];
+	xx=coordinates[0]-center[0];
+	yy=coordinates[1]-center[1];
+	zz=coordinates[2]-center[2];
 	mag2=xx*xx+yy*yy+zz*zz;
 	mag=pow(mag2,0.5);
 	if(mag<r+radius){reac=1;}
@@ -127,9 +127,9 @@ bool protein::chkcntr(vector<double> center)
 {
 	bool col=false;
 	double xx,yy,zz,mag2,mag;
-	xx=newcoords[0]-center[0];
-	yy=newcoords[1]-center[1];
-	zz=newcoords[2]-center[2];
+	xx=coordinates[0]-center[0];
+	yy=coordinates[1]-center[1];
+	zz=coordinates[2]-center[2];
 	mag2=xx*xx+yy*yy+zz*zz;
 	mag=pow(mag2,0.5);
 	if(mag<r+radius){col=true;}
@@ -141,9 +141,9 @@ bool protein::chkcol(vector<double> pos2)
 	bool col=false;
 		
 	double xx,yy,zz,mag2,mag;
-	xx=pos2[0]-newcoords[0];
-	yy=pos2[1]-newcoords[1];
-	zz=pos2[2]-newcoords[2];
+	xx=pos2[0]-coordinates[0];
+	yy=pos2[1]-coordinates[1];
+	zz=pos2[2]-coordinates[2];
 	mag2=xx*xx+yy*yy+zz*zz;
 	mag=pow(mag2,0.5);
 	if(mag<r+radius){col=true;}
