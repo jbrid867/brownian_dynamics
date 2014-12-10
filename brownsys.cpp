@@ -142,54 +142,64 @@ void brownsys::startNNs(double cut)
 	dumby=main.getv("coords");
 	xx=dumby[0];yy=dumby[1];zz=dumby[2];
 	bool NN;	
-
+	//NNs of main
 	for(int u=0; u<Ncr; u++)
 	{	
 		dumby=crowders[u].getv("coords");
-		x=dumby[0];y=dumby[1];z=dumby[2];
+		x=dumby[0];y=dumby[1];z=dumby[2]; 
 		mag2=x*x+y*y+z*z;
 		mag=pow(mag2,0.5);
-		if(mag<cut){nearcntr.push_back(u);}		
+		if(mag<cut){nearcntr.push_back(u);} //NNs of central protein		
 		
 
+		
 		NN=false;
-		dumby=crowders[u].getv("coords");
-		x=dumby[0];y=dumby[1];z=dumby[2];
-		mag2=(xx-x)*(xx-x)+(yy-y)+(zz-z)*(zz-z);
+		mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
 		mag=pow(mag2,0.5);
 		
-		// CAN IMPROVE THIS BY NESTING ELSE		
+		
+		// CAN IMPROVE THIS BY NESTING ELSE [DONE, ELSES NESTED]		
 
 		if(mag<cut){nns.push_back(u);NN=true;}
-		x-=2*L;
-		mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-		mag=pow(mag2,0.5);
-		if(mag<cut){nns.push_back(u+Ncr);NN=true;}
-		x+=2*L;
-		mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-		mag=pow(mag2,0.5);
-		if(mag<cut){nns.push_back(u+2*Ncr);NN=true;}
-		y-=2*L;
-		mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-		mag=pow(mag2,0.5);
-		if(mag<cut){nns.push_back(u+3*Ncr);NN=true;}
-		y+=2*L;
-		mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-		mag=pow(mag2,0.5);
-		if(mag<cut){nns.push_back(u+4*Ncr);NN=true;}
-		z-=2*L;
-		mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-		mag=pow(mag2,0.5);
-		if(mag<cut){nns.push_back(u+5*Ncr);NN=true;}
-		z+=2*L;
-		mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-		mag=pow(mag2,0.5);
-		if(mag<cut){nns.push_back(u+6*Ncr);NN=true;}
-		if(!NN){nnns.push_back(u);}
+		else{
+			x-=2*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+Ncr);NN=true;}
+			else{
+			x+=4*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+2*Ncr);NN=true;}
+			else{
+			x-=2*L;
+			y-=2*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+3*Ncr);NN=true;}
+			else{
+			y+=4*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+4*Ncr);NN=true;}
+			else{
+			y-=2*L;
+			z-=2*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+5*Ncr);NN=true;}
+			else{
+			z+=4*L;
+			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
+			mag=pow(mag2,0.5);
+			if(mag<cut){nns.push_back(u+6*Ncr);NN=true;}
+			if(!NN){nnns.push_back(u);}
+			}}}}}}//ends all 6 elses
 	}
-	cout<<nearcntr.size()<<endl;
 	
+	sort(nearcntr.begin(),nearcntr.end());
 	main.setNNs(nns, nnns);
+	
 	
 	for(int u=0; u<Ncr; u++) //can improve by linking. UNFINISHED
 	{
@@ -197,43 +207,56 @@ void brownsys::startNNs(double cut)
 		vector<int> nnns;
 		dumby=crowders[u].getv("coords");
 		xx=dumby[0];yy=dumby[1];zz=dumby[2];
-		for(int v=0; v<Ncr; v++)
-		{if(u!=v)
+		for(int v=0; v<Ncr; v++){NN=false;
+		if(u!=v)
 		{
 			dumby=crowders[v].getv("coords");
 			x=dumby[0];y=dumby[1];z=dumby[2];
 			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
 			mag=pow(mag2,0.5);
 
-			if(mag<cut){nns.push_back(u);NN=true;}
+			if(mag<cut){nns.push_back(v);NN=true;}
+			else{
 			x-=2*L;
 			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
 			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+Ncr);NN=true;}
-			x+=2*L;
+			if(mag<cut){nns.push_back(v+Ncr);NN=true;}
+			else{
+			x+=4*L;
 			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
 			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+2*Ncr);NN=true;}
+			if(mag<cut){nns.push_back(v+2*Ncr);NN=true;}
+			else{
+			x-=2*L;
 			y-=2*L;
 			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
 			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+3*Ncr);NN=true;}
-			y+=2*L;
+			if(mag<cut){nns.push_back(v+3*Ncr);NN=true;}
+			else{
+			y+=4*L;
 			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
 			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+4*Ncr);NN=true;}
+			if(mag<cut){nns.push_back(v+4*Ncr);NN=true;}
+			else{
+			y-=2*L;
 			z-=2*L;
 			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
 			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+5*Ncr);NN=true;}
-			z+=2*L;
+			if(mag<cut){nns.push_back(v+5*Ncr);NN=true;}
+			else{
+			z+=4*L;
 			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
 			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+6*Ncr);NN=true;}
+			if(mag<cut){nns.push_back(v+6*Ncr);NN=true;}
+			}}}}}} //end all 6 elses
 			if(!NN){nnns.push_back(u);}
-		}			
-		}
-	}
+			
+		}// end if u!=v			
+		}// end for v
+	
+	crowders[u].setNNs(nns,nnns);
+	
+	}// end for u
 	
 
 
@@ -263,10 +286,10 @@ void brownsys::updateNNs(double cut)
 	int NNnum=NNs.size();
 	int cnum=nearcntr.size();
 	int nNNnum=nNNs.size();
-	cout<<"cnum = "<<cnum<<endl;
+	
 	if(cnum!=0)
 	{int i=0;
-	while(i<cnum)
+	while(i<cnum) //Updates near center list
 	{	
 		pos2=crowders[nearcntr[i]].getv("coords");
 		xx=pos2[0];yy=pos2[1];zz=pos2[2];
@@ -281,7 +304,7 @@ void brownsys::updateNNs(double cut)
 	cnum=nearcntr.size();
 	
 	int count=0;
-	for(int i=0;i<Ncr;i++)
+	for(int i=0;i<Ncr;i++) 
 	{
 		if(cnum==0)
 		{
@@ -291,7 +314,7 @@ void brownsys::updateNNs(double cut)
 			mag=pow(mag2,0.5);
 			if(mag<cut){nearcntr.push_back(i);}
 		}
-		else if(i != nearcntr[count])
+		else if(i != nearcntr[count]) //assumes nearcntr is sorted
 		{
 			pos2=crowders[i].getv("coords");
 			mag2=pos2[0]*pos2[0]+pos2[1]*pos2[1]+pos2[2]*pos2[2];
@@ -304,10 +327,10 @@ void brownsys::updateNNs(double cut)
 			if(count==cnum){cnum=0;}
 		}	
 	}
-	
+	sort(nearcntr.begin(),nearcntr.end());
 
 	
-	for(int i=0; i<NNnum; i++)
+	for(int i=0; i<NNnum; i++) // Main removal loop
 	{
 		
 		index=NNs[i];
@@ -317,7 +340,7 @@ void brownsys::updateNNs(double cut)
 			pos2=crowders[index].getv("coords");
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;}
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
 		}
 		else if(index>=Ncr && index<2*Ncr) //-x border
 		{
@@ -326,7 +349,7 @@ void brownsys::updateNNs(double cut)
 			pos2[0]-=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;}
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
 		}
 		else if(index>=2*Ncr && index<3*Ncr) //+x border
 		{
@@ -335,7 +358,7 @@ void brownsys::updateNNs(double cut)
 			pos2[0]+=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;}
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
 		}
 		else if(index>=3*Ncr && index<4*Ncr) //-y border
 		{
@@ -344,7 +367,7 @@ void brownsys::updateNNs(double cut)
 			pos2[1]-=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;}
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
 		}
 		else if(index>=4*Ncr && index<5*Ncr) //+y border
 		{
@@ -353,7 +376,7 @@ void brownsys::updateNNs(double cut)
 			pos2[1]+=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;}
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
 		}
 		else if(index>=5*Ncr && index<6*Ncr) //-z border
 		{
@@ -362,7 +385,7 @@ void brownsys::updateNNs(double cut)
 			pos2[2]-=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;}
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
 		}
 		else if(index>=6*Ncr && index<7*Ncr) //+z border
 		{
@@ -371,7 +394,7 @@ void brownsys::updateNNs(double cut)
 			pos2[2]+=2*L;
 			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
 			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;}
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
 		}
 	
 	
@@ -386,42 +409,179 @@ void brownsys::updateNNs(double cut)
 		dz=pos1[2]-pos2[2];
 		if(dx<cut)
 		{if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index);nNNs.erase(nNNs.begin()+i);nNNnum-=1;}
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
 		}}//all ifs ended
 		else if(dx<cut-2*L) // -x boundary
 		{dx+=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;}
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
 		}}//-x ifs ended
 		else if(dx>2*L-cut) // +x boundary
 		{dx-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+2*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;}
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+2*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
 		}}//+x ifs ended
 		else if(dy<cut-2*L) // -y boundary
 		{dy+=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+3*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;}
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+3*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
 		}}//-y ifs ended
 		else if(dy>2*L-cut) // +y boundary
 		{dy-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+4*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;}
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+4*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
 		}}//+y ifs ended
 		else if(dz<cut-2*L) // -z boundary
 		{dz+=2*L; if(pow(dz*dz+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+5*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;}
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+5*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
 		}}//-z ifs ended
 		else if(dz>2*L-cut) // +z boundary
 		{dz-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+6*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;}
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+6*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
 		}}//+z ifs ended
 
-	} // ends NN addition loop	
+	} // ends NN addition loop for MAIN
+
+main.setNNs(NNs, nNNs);
+
+//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////// NN update for every crowder
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+
+for(int j=0; j<Ncr; j++){ //STARTS REMOVAL LOOP
+
+pos1=crowders[j].getv("coords");
+NNs=crowders[j].getNNs(true);
+nNNs=crowders[j].getNNs(false);
+NNnum=NNs.size();
+nNNnum=nNNs.size();
+
+	for(int i=0; i<NNnum; i++) // Main removal loop
+	{
+		
+		index=NNs[i];
+		
+		if(index<Ncr)
+		{
+			pos2=crowders[index].getv("coords");
+			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
+		}
+		else if(index>=Ncr && index<2*Ncr) //-x border
+		{
+			index2=index-Ncr;
+			pos2=crowders[index2].getv("coords");
+			pos2[0]-=2*L;
+			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
+		}
+		else if(index>=2*Ncr && index<3*Ncr) //+x border
+		{
+			index2=index-2*Ncr;
+			pos2=crowders[index2].getv("coords");
+			pos2[0]+=2*L;
+			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
+		}
+		else if(index>=3*Ncr && index<4*Ncr) //-y border
+		{
+			index2=index-3*Ncr;
+			pos2=crowders[index2].getv("coords");
+			pos2[1]-=2*L;
+			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
+		}
+		else if(index>=4*Ncr && index<5*Ncr) //+y border
+		{
+			index2=index-4*Ncr;
+			pos2=crowders[index2].getv("coords");
+			pos2[1]+=2*L;
+			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
+		}
+		else if(index>=5*Ncr && index<6*Ncr) //-z border
+		{
+			index2=index-5*Ncr;
+			pos2=crowders[index2].getv("coords");
+			pos2[2]-=2*L;
+			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
+		}
+		else if(index>=6*Ncr && index<7*Ncr) //+z border
+		{
+			index2=index-6*Ncr;
+			pos2=crowders[index2].getv("coords");
+			pos2[2]+=2*L;
+			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
+		}
+		
+		
+	} // ends the i removal loops	
+
+
+
+
+for(int i=0; i<nNNnum; i++) //CAN MAKE THIS BETTER BY LINKING PARTICLES FOR WHICH IVE ALREADY FOUND NNS
+	{
+		index=nNNs[i];
+		pos2=crowders[index].getv("coords");
+		dx=pos1[0]-pos2[0];
+		dy=pos1[1]-pos2[1];
+		dz=pos1[2]-pos2[2];
+		if(dx<cut)
+		{if(pow(dx*dx+dy*dy,0.5)<cut)
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
+		}}//all ifs ended
+		else if(dx<cut-2*L) // -x boundary
+		{dx+=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
+		}}//-x ifs ended
+		else if(dx>2*L-cut) // +x boundary
+		{dx-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+2*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
+		}}//+x ifs ended
+		else if(dy<cut-2*L) // -y boundary
+		{dy+=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+3*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
+		}}//-y ifs ended
+		else if(dy>2*L-cut) // +y boundary
+		{dy-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+4*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
+		}}//+y ifs ended
+		else if(dz<cut-2*L) // -z boundary
+		{dz+=2*L; if(pow(dz*dz+dy*dy,0.5)<cut)
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+5*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
+		}}//-z ifs ended
+		else if(dz>2*L-cut) // +z boundary
+		{dz-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
+		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+6*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
+		}}//+z ifs ended
+
+	} // ends i addition loop
+
+} // ends j loop for crowder nearest neighbor update
+
+
+
+
+
+
+
+	
 }
 
 void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 {
-	cout<<"move"<<endl;
+	
 	del_t=h;
-	bool col, resolved = false;
-	double xx,yy,zz,v,t1,t;
+	bool col, resolved, secondary = false;
+	double xx,yy,zz,v,t1,t, mag2, mag;
 	int index, index1;
 	double v2, reactime=0;
 	
@@ -433,11 +593,14 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 	//main.newpos(cpos,"center");
 	
 	
-	t=del_t+2;
-	reactime=del_t+2;
+	
+	
 	// move crowders and resolve collisions
 	while(!resolved){
 	col=false;
+	
+	t=del_t;
+	reactime=del_t;
 
 	if(main.chkreac(cpos))
 	{
@@ -455,31 +618,39 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 		if(crowders[nearcntr[i]].chkcntr(cpos))
 		{
 			col=true;
-			cout<<"COLLISION "<<i<<endl;
-			index1=i;
 			t1=coltime(crowders[nearcntr[i]]);
-			if(t1<t){t=t1; index=index1; reaction=false;}
+			if(t1<t){t=t1; index=nearcntr[i]; reaction=false;}
 		}
 			
 			
 		
 	}} // end find collision for and near center if
+
+	if(del_t<pow(10.0,-18.0)){col=false; reaction=false;}
 	if(col && !reaction)
 	{
-		main.newpos(cvel, t,"center"); 
+		//main.newpos(cvel, t,"center"); 
 		
-		for(int i=0;i<Ncr;i++)
+		for(int i=0;i<3;i++){cpos[i]=cvel[i]*t;}
+		
+		/*for(int i=0;i<Ncr;i++)
 		{
 			crowders[i].newpos(cvel, t, "center");
 			crowders[i].update();
-		}
+		}*/
+
+		//for(int i=0;i<3;i++){cpos[i]=cvel[i]*t;}
+		
 		resolvec(crowders[index],t); // check secondary co
+		
 		/*main.newpos(cpos, "center");
 		for(int i=0;i<Ncr;i++)
 		{
 			crowders[i].newpos(cpos, "center");
 		}*/
 		cout<<"collision resolved "<<index<<endl;
+		
+		
 	}
 	else if(reaction)
 	{
@@ -494,14 +665,98 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 		{
 			crowders[i].newpos(cpos, "center");
 		}
-		cout<<"all collisions resolved"<<endl;
+		
+		
+		cout<<"remaining time = "<<del_t<<endl;
 		resolved=true;
 	}//end else
 	
 	}//end while
+
+
+
+///////////////////////////////////////////////////////////////////////////
+/////////MOVE MAIN/////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+/*
+vector<double> disp(3), newpos(3), newvel(3);
+vector<double> posm;
+reactime=0;
+mag2=0;
+posm=main.getv("coords");
+For(int i=0;i<3;i++){disp[i]=distro(gen); newpos[i]=posm[i]+disp[i]; newvel[i]=disp[i]/h; mag2+=newpos[i]*newpos[i];}
+mag=pow(mag2,0.5);
+
+if(mag<main.getp("radius")+crowders[1].getp("radius")){reaction=true;}
+*/
+
+
 	
 	
+}// end moveall
+
+
+void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqsteps)
+{
+	vector<double> pos1(3), pos2(3), posm(3), disp(3);
+	vector<int> nns;
+	int numnns, count;
+	bool clash;
+	double mag, mag2, r1, r2;
+
+	for(int i=0;i<eqsteps;i++) // should be while !equilibrated
+	{cout<<"equilibration step # "<<i<<endl;
+	for(int k=0;k<Ncr;k++){
+		
+		nns=crowders[k].getNNs(true);
+		numnns=nns.size();
+		pos1=crowders[k].getv("coords");
+		posm=main.getv("coords");		
+
+		for(int j=0;j<3;j++){disp[j]=distro(gen); pos1[j]+=disp[j];} //get displacement
+		
+		count=0; mag=0; mag2=0;
+		clash=false;
+		
+		//clash with main
+		for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[i]-posm[i])*(pos1[i]-posm[i]);}
+		mag=pow(mag2,0.5);
+		if(mag<crowders[k].getp("radius")+main.getp("radius")){clash=true;}	
+
+		//clash with center
+		mag=0;mag2=0;
+		for(int dumb=0;dumb<3;dumb++){mag2+=pos1[i]*pos1[i];}
+		mag=pow(mag2,0.5);
+		if(mag<crowders[k].getp("radius")+crad){clash=true;}	
+
+		//clash with crowder
+		while(count<numnns && clash==false)
+		{
+			mag2=0; mag=0;
+			pos2=crowders[nns[count]%Ncr].getv("coords");
+			for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[i]-pos2[i])*(pos1[i]-pos2[i]);}
+			mag=pow(mag2,0.5);
+			if(mag<crowders[k].getp("radius")+crowders[nns[count]%Ncr].getp("radius"))
+			{clash=true;}
+			else{count++;}
+		}
+		if(!clash){crowders[k].setpos(pos1);}
+
+
+	}}//ends eqsteps and Ncr for loops	
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 void brownsys::resolvec(protein& two, double dt)
 {
@@ -510,6 +765,7 @@ void brownsys::resolvec(protein& two, double dt)
 	
 
 	vector<double> dr0(3), newvel(3), rhat(3);
+	vector<int> nns;
 	vector<double> pos2=two.getv("coords");
 	double mag, mag2, v1x, v2x, v0x=0;
 	double r=two.getp("radius");
@@ -520,13 +776,19 @@ void brownsys::resolvec(protein& two, double dt)
 	for(int i=0;i<3;i++){rhat[i]=dr0[i]/mag; v0x+=rhat[i]*cvel[i];}
 	v2x=(2*cmass)/(cmass+m) * v0x;
 	v1x=(cmass-m)/(cmass+m) * v0x;
+	
 	for(int i=0;i<3;i++)
 	{	
 		cvel[i]+=(v1x-v0x)*rhat[i]; 
 		newvel[i]=v2x*rhat[i];
 		cpos[i]=cvel[i]*(del_t-dt);
-		two.newpos(newvel, del_t-dt, "normal");
+		
+		
 	}
+	two.newvel(newvel);
+	two.newpos(newvel, del_t-dt, "new");
+	//CHECK SECONDARY COLLISIONS
+	two.sec_col(crowders, Ncr);
 	del_t-=dt;	
 
 }
@@ -565,9 +827,7 @@ double brownsys::coltime(protein two)
 	if(rdcl2>0)
 	{
 		tm=(vdr-rdcl)/v2;
-		cout<<"t minus = "<<tm<<endl;
 		tp=(vdr+rdcl)/v2;
-		cout<<"t plus = "<<tp<<endl;
 		if(tm>0){t=tm;}
 		else if(tp>0){t=tp;}
 		else{cout<<"negative time"<<endl;}
@@ -575,7 +835,7 @@ double brownsys::coltime(protein two)
 		
 	}
 	else{cout<<"complex time"<<endl;}
-	cout<<"t = "<<t<<endl;
+	
 	return t;
 }
 
@@ -612,7 +872,11 @@ void brownsys::printcoords(protein test)
 	cout<<"z= "<<pos[2]<<endl;	
 }
 
-
+void brownsys::NCout()
+{
+	int num=nearcntr.size();
+	for(int i=0;i<num;i++){cout<<nearcntr[i]<<endl;}
+}
 
 
 /*void brownsys::shftcntr()

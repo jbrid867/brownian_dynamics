@@ -77,6 +77,11 @@ void protein::move(mt19937& gen, normal_distribution<> distro)
 	cout<<"move vel"<<vel[0]<<endl;	
 }
 
+void protein::setpos(vector<double> pos)
+{
+	for(int i=0;i<3;i++){coordinates[i]=pos[i];}
+}
+
 void protein::resetpos()
 {
 	for(int i=0;i<dim;i++){newcoords[i]=coordinates[i];}
@@ -96,7 +101,9 @@ void protein::newpos(vector<double> nvel, double dt, string a)
 	coordinates[0]-=nvel[0]*dt;
 	coordinates[1]-=nvel[1]*dt;
 	coordinates[2]-=nvel[2]*dt;}
-	else{for(int i=0; i<3; i++){newcoords[i]+=nvel[i]*dt;}}
+	else if(a=="new"){
+	for(int i=0;i<3;i++){newcoords[i]=coordinates[i]+nvel[i]*dt;}}
+	else{for(int i=0; i<3; i++){coordinates[i]+=nvel[i]*dt;}}
 }
 
 void protein::update()
@@ -113,9 +120,9 @@ bool protein::chkreac(vector<double> center)
 {
 	bool reac=false;
 	double xx,yy,zz,mag2,mag;
-	xx=newcoords[0]-center[0];
-	yy=newcoords[1]-center[1];
-	zz=newcoords[2]-center[2];
+	xx=coordinates[0]-center[0];
+	yy=coordinates[1]-center[1];
+	zz=coordinates[2]-center[2];
 	mag2=xx*xx+yy*yy+zz*zz;
 	mag=pow(mag2,0.5);
 	if(mag<r+radius){reac=1;}
@@ -127,9 +134,9 @@ bool protein::chkcntr(vector<double> center)
 {
 	bool col=false;
 	double xx,yy,zz,mag2,mag;
-	xx=newcoords[0]-center[0];
-	yy=newcoords[1]-center[1];
-	zz=newcoords[2]-center[2];
+	xx=coordinates[0]-center[0];
+	yy=coordinates[1]-center[1];
+	zz=coordinates[2]-center[2];
 	mag2=xx*xx+yy*yy+zz*zz;
 	mag=pow(mag2,0.5);
 	if(mag<r+radius){col=true;}
@@ -141,9 +148,9 @@ bool protein::chkcol(vector<double> pos2)
 	bool col=false;
 		
 	double xx,yy,zz,mag2,mag;
-	xx=pos2[0]-newcoords[0];
-	yy=pos2[1]-newcoords[1];
-	zz=pos2[2]-newcoords[2];
+	xx=pos2[0]-coordinates[0];
+	yy=pos2[1]-coordinates[1];
+	zz=pos2[2]-coordinates[2];
 	mag2=xx*xx+yy*yy+zz*zz;
 	mag=pow(mag2,0.5);
 	if(mag<r+radius){col=true;}
@@ -151,15 +158,52 @@ bool protein::chkcol(vector<double> pos2)
 }
 
 
+bool protein::sec_col(vector<protein> &prots, int cnum)
+{
+	vector<double> two;
+	int index;
+	double xx,yy,zz,mag2,mag;
+	bool col=false;	
+	int nnnum=NNs.size();	
+	
+	for(int i=0;i<nnnum;i++)
+	{	index=NNs[i];
+
+				
+		two=prots[index].getv("coords");
+		xx=two[0]-newcoords[0];
+		yy=two[1]-newcoords[1];
+		zz=two[2]-newcoords[2];
+		mag2=xx*xx+yy*yy+zz*zz;
+		mag=pow(mag2,0.5);
+		
+		
+		if(mag < radius + prots[index].getp("radius")){cout<<"secondary collision"<<endl; col=true;}
+	
+	}
+	//if(!col){cout<<"no secondary collisions"<<endl;}
+	return col;
+}
 
 
 
+void protein::remove_neighbor(int index)
+{
+	NNs.erase(NNs.begin()+index);
+}
+
+void protein::add_neighbor(int index)
+{
+	NNs.push_back(index);
+}
 
 
-
-
-
-
+void protein::NNout()
+{
+	int nns=NNs.size();
+	for(int i=0; i<nns; i++){cout<<NNs[i]<<endl;}
+	cout<<"BALLS"<<endl;
+}
 
 
 

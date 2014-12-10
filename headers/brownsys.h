@@ -29,14 +29,16 @@ public:
 	void updateNNs(double cut);
 
 	// Dynamics
-	void moveall(mt19937& gen, normal_distribution<> distro);
+	void moveall(mt19937& gen, normal_distribution<> distro); //String for equilibration or actual step
 	void resolvec(protein& two, double dt); // resolves collisions with center
+	void resolvec(protein& one, protein& two, double dt); // resolves collisions between two proteins
 	void shftcntr(); 
 	void printcoords(protein test);
 	double coltime(protein one, protein two);
 	double coltime(protein two);
+	void equilibrate(mt19937& gen, normal_distribution<> distro, int eqsteps);
 
-	
+	void NCout();
 	
 
 	// Access functions

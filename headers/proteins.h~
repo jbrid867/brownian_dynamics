@@ -29,14 +29,19 @@ public:
 	
 	void move(mt19937& gen, normal_distribution<> distro);
 	void resetpos(); //sets newcoords=coords
-	void setpos(vector<double> pos); // sets newcoords = pos
+	void setpos(vector<double> pos); // sets coords = pos
 	void newpos(vector<double> pos, string a); // adds newcoords + pos
 	void newpos(vector<double> nvel, double dt, string a); // adds newcoords + vel*dt
 	void update();
 	bool chkreac(vector<double> center); //checks for collision with center
 	bool chkcntr(vector<double> center);	
 	bool chkcol(vector<double> pos2);
+	bool sec_col(vector<protein> &prots, int cnum);
+
+	void remove_neighbor(int index);
+	void add_neighbor(int index);
 	
+	void NNout(); //Print NNs
 	
 	
 	//vector<double> resolve(vector<double> p2); //resolves collision with another protein

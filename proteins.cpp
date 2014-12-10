@@ -77,6 +77,11 @@ void protein::move(mt19937& gen, normal_distribution<> distro)
 	cout<<"move vel"<<vel[0]<<endl;	
 }
 
+void protein::setpos(vector<double> pos)
+{
+	for(int i=0;i<3;i++){coordinates[i]=pos[i];}
+}
+
 void protein::resetpos()
 {
 	for(int i=0;i<dim;i++){newcoords[i]=coordinates[i];}
@@ -96,7 +101,14 @@ void protein::newpos(vector<double> nvel, double dt, string a)
 	coordinates[0]-=nvel[0]*dt;
 	coordinates[1]-=nvel[1]*dt;
 	coordinates[2]-=nvel[2]*dt;}
+	else if(a=="new"){
+	for(int i=0;i<3;i++){newcoords[i]=coordinates[i]+nvel[i]*dt;}}
 	else{for(int i=0; i<3; i++){coordinates[i]+=nvel[i]*dt;}}
+}
+
+void protein::newvel(vector<double> v)
+{
+	for(int i=0;i<3;i++){vel[i]=v[i];}
 }
 
 void protein::update()
@@ -151,15 +163,52 @@ bool protein::chkcol(vector<double> pos2)
 }
 
 
+bool protein::sec_col(vector<protein> &prots, int cnum)
+{
+	vector<double> two;
+	int index;
+	double xx,yy,zz,mag2,mag;
+	bool col=false;	
+	int nnnum=NNs.size();	
+	
+	for(int i=0;i<nnnum;i++)
+	{	index=NNs[i];
+
+				
+		two=prots[index].getv("coords");
+		xx=two[0]-newcoords[0];
+		yy=two[1]-newcoords[1];
+		zz=two[2]-newcoords[2];
+		mag2=xx*xx+yy*yy+zz*zz;
+		mag=pow(mag2,0.5);
+		
+		
+		if(mag < radius + prots[index].getp("radius")){cout<<"secondary collision"<<endl; col=true;}
+	
+	}
+	//if(!col){cout<<"no secondary collisions"<<endl;}
+	return col;
+}
 
 
 
+void protein::remove_neighbor(int index)
+{
+	NNs.erase(NNs.begin()+index);
+}
+
+void protein::add_neighbor(int index)
+{
+	NNs.push_back(index);
+}
 
 
-
-
-
-
+void protein::NNout()
+{
+	int nns=NNs.size();
+	for(int i=0; i<nns; i++){cout<<NNs[i]<<endl;}
+	cout<<"BALLS"<<endl;
+}
 
 
 

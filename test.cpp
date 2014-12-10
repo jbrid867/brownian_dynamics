@@ -8,9 +8,11 @@ int main(){
 	normal_distribution<> distro(0,pow(2*D*h,0.5));
 	brownsys baller(N);
 	baller.startNNs(cutoff); // NOT FINISHED. ONLY FINDS IF ITS NEAR MAIN
-	for(int i=0;i<1;i++){baller.moveall(gen,distro); baller.updateNNs(cutoff);}
+	baller.NCout();
+	baller.equilibrate(gen,distro,15);
+	for(int i=0;i<5;i++){baller.moveall(gen,distro); baller.updateNNs(cutoff);baller.NCout();}
 
-
+	//cout<<10/3<<endl;
 
 	//shftcntr(baller); // seems clunky
 	 // integrate with moveall eventually
