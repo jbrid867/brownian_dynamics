@@ -1,6 +1,10 @@
 #include "headers/brownsys.h"
 
 int main(){
+	bool equil = true;
+	bool go = false;
+
+
 	double cutoff=4*r;
 	cout<<"numcrowd = "<<N<<endl;
 	random_device rd; // Seed RNG
@@ -9,7 +13,7 @@ int main(){
 	brownsys baller(N);
 	baller.startNNs(cutoff); // NOT FINISHED. ONLY FINDS IF ITS NEAR MAIN
 	baller.NCout();
-	baller.equilibrate(15);
+	baller.equilibrate(gen,distro,15);
 	for(int i=0;i<5;i++){baller.moveall(gen,distro); baller.updateNNs(cutoff);baller.NCout();}
 
 	//cout<<10/3<<endl;
@@ -22,6 +26,9 @@ int main(){
 	 
 	
 return 0;}
+
+
+
 
 /* SOME PSUEDO
 

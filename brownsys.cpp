@@ -1,6 +1,8 @@
 // implemention files for brownsys class
 
 #include "headers/brownsys.h"
+#include "dem_funcs.cpp"
+
 
 using namespace std;
 
@@ -582,9 +584,30 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 	del_t=h;
 	bool col, resolved, secondary = false;
 	double xx,yy,zz,v,t1,t, mag2, mag;
-	int index, index1;
+	int index, index1, nnNum;
 	double v2, reactime=0;
-	
+	vector<double> crmove(3), crvel(3), crpos(3), cr2pos(3);
+	vector<int> nearest;
+
+
+
+
+	 
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+//////// OLD MOVE SHIT ////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+/*	
 	// move central particle. DONT NECESSARILY DO THIS FIRST
 	for(int i=0;i<dim;i++){cpos[i]=distro(gen); cvel[i]=cpos[i]/del_t; v2+=cvel[i]*cvel[i];}
 	
@@ -637,7 +660,7 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 		{
 			crowders[i].newpos(cvel, t, "center");
 			crowders[i].update();
-		}*/
+		}*//*
 
 		//for(int i=0;i<3;i++){cpos[i]=cvel[i]*t;}
 		
@@ -647,7 +670,7 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 		for(int i=0;i<Ncr;i++)
 		{
 			crowders[i].newpos(cpos, "center");
-		}*/
+		}*//*
 		cout<<"collision resolved "<<index<<endl;
 		
 		
@@ -673,7 +696,7 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 	
 	}//end while
 
-
+*/
 
 ///////////////////////////////////////////////////////////////////////////
 /////////MOVE MAIN/////////////////////////////////////////////////////////
@@ -696,13 +719,27 @@ if(mag<main.getp("radius")+crowders[1].getp("radius")){reaction=true;}
 }// end moveall
 
 
+
 void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqsteps)
 {
-	vector<double> pos1(3), pos2(3), posm(3), disp(3);
+	vector<double> pos1(3), pos2(3), posm(3), disp(3), PBCvec(3);
 	vector<int> nns;
-	int numnns, count;
+	int numnns, count, clashcount=0;
 	bool clash;
 	double mag, mag2, r1, r2;
+
+	posm=main.getv("coords");
+
+	vector<double> PDFunc=PDF1(crowders, Ncr);
+	ofstream pdf;
+	pdf.open("pdfbeg.txt");
+	for(int i=0;i<PDFunc.size();i++)
+	{
+		pdf << PDFunc[i] << endl;
+	}
+	pdf.close();
+
+
 
 	for(int i=0;i<eqsteps;i++) // should be while !equilibrated
 	{cout<<"equilibration step # "<<i<<endl;
@@ -711,7 +748,7 @@ void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqste
 		nns=crowders[k].getNNs(true);
 		numnns=nns.size();
 		pos1=crowders[k].getv("coords");
-		posm=main.getv("coords");		
+				
 
 		for(int j=0;j<3;j++){disp[j]=distro(gen); pos1[j]+=disp[j];} //get displacement
 		
@@ -731,28 +768,46 @@ void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqste
 
 		//clash with crowder
 		while(count<numnns && clash==false)
-		{
+		{	
+						
 			mag2=0; mag=0;
 			pos2=crowders[nns[count]%Ncr].getv("coords");
-			for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[i]-pos2[i])*(pos1[i]-pos2[i]);}
+			PBCvec = PBCswitch(Ncr, nns[count]);
+
+			for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[dumb]-(pos2[dumb]+PBCvec[dumb]))*(pos1[dumb]-(pos2[dumb]+PBCvec[dumb])); } //
 			mag=pow(mag2,0.5);
 			if(mag<crowders[k].getp("radius")+crowders[nns[count]%Ncr].getp("radius"))
-			{clash=true;}
+			{clash=true; clashcount++;}
 			else{count++;}
 		}
 		if(!clash){crowders[k].setpos(pos1);}
 
 
-	}}//ends eqsteps and Ncr for loops	
+	}}//ends eqsteps and Ncr for loops
+cout<<"clash count = "<<clashcount<<endl;
+
+PDFunc=PDF1(crowders, Ncr);
+ofstream pdfe;
+pdfe.open("pdfend.txt");
+for(int i=0;i<PDFunc.size();i++)
+{
+	pdfe << PDFunc[i] << endl;
 }
+pdfe.close();
+
+
+
+
+}// ends equilibrate function
+
+//////////////// Useful functions
 
 
 
 
 
-
-
-
+//////////////////////////////////////////////////
+	
 
 
 
@@ -877,6 +932,10 @@ void brownsys::NCout()
 	int num=nearcntr.size();
 	for(int i=0;i<num;i++){cout<<nearcntr[i]<<endl;}
 }
+
+
+
+
 
 
 /*void brownsys::shftcntr()
