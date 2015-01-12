@@ -582,21 +582,122 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 {
 	
 	del_t=h;
-	bool col, resolved, secondary = false;
+	bool mainmove, cmove, col, resolved, secondary = false;
 	double xx,yy,zz,v,t1,t, mag2, mag;
 	int index, index1, nnNum;
 	double v2, reactime=0;
-	vector<double> crmove(3), crvel(3), crpos(3), cr2pos(3);
+	vector<double> move(3), mvVel(3), pos1(3), pos2(3), npos(3);
 	vector<int> nearest;
+	vector<double> PBCvec;
+
+
+	/*
+	for now:
+	 - Move main
+	 - move center
+	 - move crowders
+	later:
+	 - move them all randomly with checks
+	 */
+	 /////////////////////////////////////////////////////////////////////////
+	 /////////////////////////////////////////////////////////////////////////
+	 //Move main
+	 /////////////////////////////////////////////////////////////////////////
+	 /////////////////////////////////////////////////////////////////////////
+
+	 nearest=main.getNNs(true);
+	 pos1=main.getv("coords");
+	 for(int k=0;k<3;k++)
+	 {
+	 	move[k]=distro(gen); mvVel[k]=move[k]/h;npos[k]=move[k]+pos1[k];
+	 }
+
+	 //Reactions and escape
+	 mag2=0;
+	 for(int k=0;k<3;k++)
+	 {
+	 	mag2+=npos[k]*npos[k];
+	 }
+
+	 mag=pow(mag2,0.5);
+	 if(mag<crad+main.getp("radius"))
+	 {
+	 	// store collision time and set collision bool to true
+	 }
+	 else if(mag > q)
+	 {
+	 	// store escape time and set escape bool to true
+	 }
+
+	 // collisions with crowders
+	 for(int k=0;k<nearest.size();k++)
+	 {
+	 	mag2=0;
+	 	pos2=crowders[nearest[k]%Ncr].getv("coords");
+	 	PBCvec=PBCswitch(Ncr, nearest[k]);
+
+	 	for(int i=0;i<3;i++)
+	 	{
+	 		pos2[i]+=PBCvec[i]*L;
+	 		mag2+=(pos1[i]-pos2[i])*(pos1[i]-pos2[i]);
+	 	}
+	 	mag=pow(mag2,0.5);
+	 	if(mag<main.getp("radius")+crowders[nearest[k]%Ncr].getp("radius"))
+	 	{
+	 		//RESOLVE
+	 	}
+	 }
 
 
 
+	 ////////////////////////////////////////////////////////////////////////////
+	 ////////////////////////////////////////////////////////////////////////////
+	 /////////////// MOVE CENTER ////////////////////////////////////////////////
+	 ////////////////////////////////////////////////////////////////////////////
+	 ////////////////////////////////////////////////////////////////////////////
 
-	 
+	 for(int k=0;k<3;k++)
+	 {
+	 	move[k]=distro(gen); mvVel[k]=move[k]/h; npos[k]=move[k];
+	 }
+
+	 // reaction
+	 pos1=main.getv("coords");
+	 mag2=0;
+	 for(int k=0;k<3;k++)
+	 {
+	 	mag2+=(npos[k]-pos1[k])*(npos[k]-pos1[k]);
+	 }
+	 mag=pow(mag2,0.5);
+	 if(mag<main.getp("radius")+crad)
+	 {
+	 	// store time and compare with crowder collisions
+	 }
+
+	 // check for collision with crowders
+	 for(int k=0; k<nearcntr.size(); k++)
+	 {
+	 	mag2=0;
+	 	pos2=crowders[k].getv("coords");
+	 	for(int i=0;i<3;i++)
+	 	{
+	 		mag2+=(pos2[k]-npos[k])*(pos2[k]-npos[k]);
+	 	}
+	 	mag=pow(mag2,0.5);
+	 	if(mag<crad+crowders[k].getp("radius"))
+	 	{
+	 		// RESOLVE
+	 	}
+	 }
+
+	 // update ALL positions, check for escape THEN check PBCs
 
 
-
-
+	 //////////////////////////////////////////////////////////////////////////////////
+	 //////////////////////////////////////////////////////////////////////////////////
+	 // MOVE CROWDERS /////////////////////////////////////////////////////////////////
+	 //////////////////////////////////////////////////////////////////////////////////
+	 //////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -788,7 +889,7 @@ cout<<"clash count = "<<clashcount<<endl;
 
 PDFunc=PDF1(crowders, Ncr);
 ofstream pdfe;
-pdfe.open("pdfend.txt");
+pdfe.open("pdfend10.txt");
 for(int i=0;i<PDFunc.size();i++)
 {
 	pdfe << PDFunc[i] << endl;

@@ -13,7 +13,7 @@ int main(){
 	brownsys baller(N);
 	baller.startNNs(cutoff); // NOT FINISHED. ONLY FINDS IF ITS NEAR MAIN
 	baller.NCout();
-	baller.equilibrate(gen,distro,100);
+	baller.equilibrate(gen,distro,1000);
 	//for(int i=0;i<5;i++){baller.moveall(gen,distro); baller.updateNNs(cutoff);baller.NCout();}
 
 	//cout<<10/3<<endl;
