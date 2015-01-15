@@ -704,6 +704,7 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 
 
 
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //////// OLD MOVE SHIT ////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -963,7 +964,7 @@ double brownsys::coltime(protein two)
 	for(int i=0;i<dim;i++){vdr+=cvel[i]*pos[i]; v2+=cvel[i]*cvel[i];}
 	
 
-	//not doesnt work for dim~=3
+	// doesnt work for dim~=3
 	xy=2*pos[0]*pos[1]*cvel[0]*cvel[1];
 	yz=2*pos[2]*pos[1]*cvel[2]*cvel[1];
 	xz=2*pos[0]*pos[2]*cvel[0]*cvel[2];
