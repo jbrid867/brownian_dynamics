@@ -1,8 +1,0 @@
-#ifndef _DEM_FUNCS_H_
-#define _DEM_FUNCS_H_
-
-
-double PBCswitch(int crowds, int index, int a);
-
-
-#endif
