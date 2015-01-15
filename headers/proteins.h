@@ -30,7 +30,7 @@ public:
 	void move(mt19937& gen, normal_distribution<> distro);
 	void resetpos(); //sets newcoords=coords
 	void setpos(vector<double> pos); // sets coords = pos
-	void newpos(vector<double> pos, string a); // adds newcoords + pos
+	void newpos(vector<double> pos); // adds newcoords + pos
 	void newpos(vector<double> nvel, double dt, string a); // adds newcoords + vel*dt
 	void newvel(vector<double> v);
 	void update();

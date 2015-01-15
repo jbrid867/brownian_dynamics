@@ -5,5 +5,6 @@
 *.dat~
 *.pdf~
 
-*.o #objects from compilation
+#objects from compilation
+*.o 
 *.o~

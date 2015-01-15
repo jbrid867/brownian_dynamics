@@ -40,6 +40,7 @@ brownsys::brownsys(int num)
 	Ncr=num;
 	crowds=true;	
 	reaction=false;
+	escape=false;
 	double xx,yy,zz,mag,mag2; // dummies
 	int u,v,w,ran;
 	double n=ceil(pow(num,1.0/3.0));
@@ -581,14 +582,21 @@ for(int i=0; i<nNNnum; i++) //CAN MAKE THIS BETTER BY LINKING PARTICLES FOR WHIC
 void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 {
 	
-	del_t=h;
-	bool mainmove, cmove, col, resolved, secondary = false;
-	double xx,yy,zz,v,t1,t, mag2, mag;
+	del_t=h; // del_t is the time remaining, t1 is the time until an event
+	//bool mainmove, cmove, col, resolved, secondary = false;
+	double v,tp,tm,t, t1, mag2, mag;
 	int index, index1, nnNum;
-	double v2, reactime=0;
-	vector<double> move(3), mvVel(3), pos1(3), pos2(3), npos(3);
-	vector<int> nearest;
+	double rad2, rad, vdr, crvdr, v2, vc2, r2, R, reactime=0;
+	vector<double> move(3), mvVel(3), pos1(3), pos2(3), npos(3), npos2(3), dr(3);
+	vector<int> nearest, nearest2;
 	vector<double> PBCvec;
+	bool collision, resolved = false;
+	t1=del_t;
+
+	/////////////// COLLISION RESOLUTION STUFF
+	vector<double> rhat(3), vperp(3), vpar(3), v1f(3), v2f(3);
+	double m1,m2,R1,R2;
+	bool ismain;
 
 
 	/*
@@ -607,45 +615,329 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 
 	 nearest=main.getNNs(true);
 	 pos1=main.getv("coords");
-	 for(int k=0;k<3;k++)
-	 {
-	 	move[k]=distro(gen); mvVel[k]=move[k]/h;npos[k]=move[k]+pos1[k];
-	 }
-
-	 //Reactions and escape
 	 mag2=0;
 	 for(int k=0;k<3;k++)
 	 {
-	 	mag2+=npos[k]*npos[k];
+	 	move[k]=distro(gen); mvVel[k]=move[k]/h;npos[k]=move[k]+pos1[k]; 
+	 	mag2+=npos[k]*npos[k]; v2+=mvVel[k]*mvVel[k]; vdr+=mvVel[k]*pos1[k];
+	 	r2+=pos1[k]*pos1[k];
 	 }
-
 	 mag=pow(mag2,0.5);
+
+	 // REACTION
 	 if(mag<crad+main.getp("radius"))
 	 {
-	 	// store collision time and set collision bool to true
-	 }
+	 	rad2=vdr*vdr - v2*(r2-(crad+main.getp("radius")));
+	 	if(rad2>0)
+	 	{
+	 		rad=pow(rad2,0.5);
+	 	}
+	 	else
+	 	{
+	 		cout<<"err: negative in radical"<<endl;
+	 	}
+	 	tm=(-1.0*vdr - rad)/v2;
+	 	tp=(-1.0*vdr + rad)/v2;
+	 	if(tm<0)
+	 	{
+	 		t=tp;
+	 	} 
+	 	else
+	 	{
+	 		t=tm;
+	 	}
+	 	if(t<del_t)
+	 	{
+	 		reaction=true;
+	 		t1=t;
+	 		cout<<"potential reaction"<<endl;
+	 	}
+	 	else
+	 	{
+	 		cout<<"err: time is greater than time step"<<endl;
+	 	}
+
+
+
+	 } // closes reaction loop
+
+	 // ESCAPE
 	 else if(mag > q)
 	 {
-	 	// store escape time and set escape bool to true
-	 }
+	 	rad2=vdr*vdr - v2*(r2-q*q);
+	 	if(rad2>0)
+	 	{
+	 		rad=pow(rad2,0.5);
+	 	}
+	 	else
+	 	{
+	 		cout<<"err: negative in radical"<<endl;
+	 	}
+	 	tm=(-1.0*vdr - rad)/v2;
+	 	tp=(-1.0*vdr + rad)/v2;
+	 	if(tm<0)
+	 	{
+	 		t=tp;
+	 	} 
+	 	else
+	 	{
+	 		t=tm;
+	 	}
+	 	if(t<del_t)
+	 	{
+	 		escape=true;
+	 		t1=t;
+	 		cout<<"potential escape"<<endl;
+	 	}
+	 	else
+	 	{
+	 		cout<<"err: time is greater than time step"<<endl;
+	 	}
+	 } // closes escape loop
 
 	 // collisions with crowders
+	 R = main.getp("radius")+crowders[nearest[k]%Ncr].getp("radius");
 	 for(int k=0;k<nearest.size();k++)
 	 {
-	 	mag2=0;
+	 	vdr, mag2=0;
 	 	pos2=crowders[nearest[k]%Ncr].getv("coords");
 	 	PBCvec=PBCswitch(Ncr, nearest[k]);
 
-	 	for(int i=0;i<3;i++)
+	 	for(int i=0;i<3;i++) //
 	 	{
-	 		pos2[i]+=PBCvec[i]*L;
-	 		mag2+=(pos1[i]-pos2[i])*(pos1[i]-pos2[i]);
+	 		pos2[i]+=PBCvec[i]*L; // position of potential collidee
+	 		dr[i]=pos2[i]-pos1[i];
+	 		mag2+=dr[i]*dr[i]; // dist^2 between particles
+	 		vdr+=mvVel[i]*dr[i];
+
 	 	}
 	 	mag=pow(mag2,0.5);
-	 	if(mag<main.getp("radius")+crowders[nearest[k]%Ncr].getp("radius"))
+	 	if(mag<R)
 	 	{
-	 		//RESOLVE
-	 	}
+	 		
+	 		rad2 = vdr*vdr - v2*(mag2-R*R);
+	 		if(rad2>0)
+	 		{
+	 			rad=pow(rad2,0.5);
+	 		}
+	 		else
+	 		{
+	 			cout<<"err: negative in radical"<<endl;
+	 		}
+	 		tm = (vdr - rad)/v2;
+	 		tp = (vdr + rad)/v2;
+	 		if(tm<0)
+	 		{
+	 			t=tp;
+	 		}
+	 		else
+	 		{
+	 			t=tm;
+	 		}
+	 		if(t<t1)
+	 		{
+	 			t1 = t;
+	 			reaction, escape = false;
+	 			collision=true;
+	 			index=nearest[k];
+	 		}
+
+	 	} // closes crowder collision loop
+	 } // closes NN loop
+
+	 if(escape)
+	 {
+	 	cout<<"No reaction"<<endl;
+	 }
+	 else if(reaction)
+	 {
+	 	cout<<"Reaction"<<endl;
+	 }
+	 else if(collision)
+	 {
+	 	index1=index;
+	 	ismain=true
+	 	R1=main.getp("radius");
+	 	R2=crowders[index%Ncr].getp("radius");
+	 	m1=main.getp("mass");
+		m2=crowders[index%Ncr].getp("mass");
+		pos2=crowders[index%Ncr].getv("coords");
+		PBCvec=PBCswitch(Ncr, index);
+		del_t=del_t-t1; // remaining time, move forward to t seconds
+	 	while(!resolved)
+	 	{
+		 	vdr=0;
+		 	crvdr=0;
+		 	v2,vc2,mag2=0;
+		 	collision=false;
+		 	
+		 	for(int k=0;k<3;k++)
+		 	{
+		 		pos1[k]+=mvVel[k]*t; // update new position
+		 		rhat[k]=((pos2[k]+PBCvec[k]*L)-npos[k])/R; // unit vector from 1 to 2
+		 		vperp[k]=mvVel[k]*rhat[k]; // normal component
+		 		vpar[k]=mvVel[k]-vperp[k]; // tangent component
+		 		v1f[k]=vpar[k] + vperp[k]*(m1-m2)/(m1+m2); // final vel of main
+		 		v2f[k]=vperp[k]*2*m1/(m1+m2); // final vel of crowder
+
+		 		// update some stuff to check for secondaries
+		 		npos[k]=pos1[k]+v1f[k]*del_t;
+		 		npos2[k]=pos2[k] + v2f[k]*del_t;
+		 		v2+=v1f[k]*v1f[k];
+		 		vc2+=v2f[k]*v2f[k];
+		 		mag2+=npos[k]*npos[k];
+		 		vdr+=pos1[k]*v1f[k];
+		 		crvdr+=pos2[k]+v2f[k];
+		 	}
+
+		 	t1=del_t;
+		 	if(ismain)
+		 	{
+			 	//check reaction
+			 	mag=pow(mag2,0.5);
+			 	if(mag<crad+R1)
+				 {
+				 	rad2=vdr*vdr - v2*(r2-(crad+main.getp("radius")));
+				 	if(rad2>0)
+				 	{
+				 		rad=pow(rad2,0.5);
+				 	}
+				 	else
+				 	{
+				 		cout<<"err: negative in radical"<<endl;
+				 	}
+				 	tm=(-1.0*vdr - rad)/v2;
+				 	tp=(-1.0*vdr + rad)/v2;
+				 	if(tm<0)
+				 	{
+				 		t=tp;
+				 	} 
+				 	else
+				 	{
+				 		t=tm;
+				 	}
+				 	if(t<del_t)
+				 	{
+				 		reaction=true;
+				 		t1=t;
+				 		cout<<"potential reaction"<<endl;
+				 	}
+				 	else
+				 	{
+				 		cout<<"err: time is greater than time step"<<endl;
+				 	}
+				} // closes reaction loop
+
+				// ESCAPE
+		 		else if(mag > q)
+		 		{
+		 			rad2=vdr*vdr - v2*(r2-q*q);
+				 	if(rad2>0)
+				 	{
+				 		rad=pow(rad2,0.5);
+				 	}
+				 	else
+				 	{
+				 		cout<<"err: negative in radical"<<endl;
+				 	}
+				 	tm=(-1.0*vdr - rad)/v2;
+				 	tp=(-1.0*vdr + rad)/v2;
+				 	if(tm<0)
+				 	{
+				 		t=tp;
+				 	} 
+				 	else if(tm>0)
+				 	{
+				 		t=tm;
+				 	}
+				 	else
+				 	{
+				 		cout<<"err: negative times"<<endl;
+				 	}
+				 	if(t<del_t)
+				 	{
+				 		escape=true;
+				 		t1=t;
+				 		cout<<"potential escape"<<endl;
+				 	}
+				 	else
+				 	{
+				 		cout<<"err: time is greater than remaining time"<<endl;
+				 	}
+		 		} // closes escape loop
+		 	
+
+
+	 			//check secondary main collision
+	 		
+		 		for(int i=0;i<nearest.size();i++)
+		 		{
+		 			pos2=crowders[nearest[i]%Ncr].getv("coords");
+		 			PBCvec=PBCswitch(Ncr, crowders);
+		 			R=main.getp("radius")+crowders[nearest[i]%Ncr];
+		 			for(int i=0;i<3;i++) //
+		 			{
+				 		pos2[i]+=PBCvec[i]*L; // position of potential collidee
+				 		dr[i]=pos2[i]-pos1[i];
+				 		mag2+=dr[i]*dr[i]; // dist^2 between particles
+				 		vdr+=mvVel[i]*dr[i];
+				 	}
+				 	mag=pow(mag2,0.5);
+				 	if(mag<R)
+				 	{
+				 		rad2=(vdr*vdr - v2*(mag2-R*R))/v2;
+				 		if(rad2>0)
+				 		{
+				 			rad=pow(rad2,0.5);
+				 			tm=(vdr-rad)/v2;
+				 			tp=(vdr+rad)/v2;
+				 			if(tm<0)
+				 			{
+				 				t=tp;
+				 			}
+				 			else
+				 			{
+				 				t=tm;
+				 			}
+				 			if(t<t1)
+				 			{
+				 				t1=t;
+				 				reaction, escape=false;
+				 				collision=true;
+				 			}
+				 		}
+				 	} // close time calculation if
+				} // close main nn loop
+				if(collision)
+				{
+					// set up to continue while
+				}
+				else if(reaction || escape)
+				{
+					resolved=true;
+				}
+	 		} // closes ismain if
+
+		}
+	}
+			
+				 	
+
+
+
+		 
+
+
+
+
+
+
+
+
+	 
+	 else
+	 {
+	 	main.setpos(npos);
 	 }
 
 
@@ -890,7 +1182,7 @@ cout<<"clash count = "<<clashcount<<endl;
 
 PDFunc=PDF1(crowders, Ncr);
 ofstream pdfe;
-pdfe.open("pdfend10.txt");
+pdfe.open("./outs/pdfend10.txt");
 for(int i=0;i<PDFunc.size();i++)
 {
 	pdfe << PDFunc[i] << endl;

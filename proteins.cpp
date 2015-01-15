@@ -87,12 +87,12 @@ void protein::resetpos()
 	for(int i=0;i<dim;i++){newcoords[i]=coordinates[i];}
 }
 
-void protein::newpos(vector<double> pos, string a)
+void protein::newpos(vector<double> pos)
 {
-	//if a="center"
-	coordinates[0]-=pos[0];
-	coordinates[1]-=pos[1];
-	coordinates[2]-=pos[2];
+	
+	newcoords[0]=pos[0];
+	newcoords[1]=pos[1];
+	newcoords[2]=pos[2];
 }
 
 void protein::newpos(vector<double> nvel, double dt, string a)

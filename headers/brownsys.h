@@ -13,7 +13,7 @@ private:
 	bool crowds; 
 	int Ncr; //number of crowders
 	int steps; //number of steps taken
-	bool reaction; // true if there is a reaction
+	bool reaction, escape; // true if there is a reaction
 	vector<double> cvel; //center velocity
 	vector<double> cpos; //center coords before shift
 	double crad;
