@@ -1,0 +1,9 @@
+*.h~
+*.cpp~
+*.txt~
+*~
+*.dat~
+*.pdf~
+
+*.o #objects from compilation
+*.o~
