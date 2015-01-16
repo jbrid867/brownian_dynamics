@@ -140,3 +140,8 @@ vector<double> PDF1(vector<protein> crowds, int Ncr) //g(r) for central particle
 	cout<<"R = "<<R<<endl;
 	return distr;
 }
+
+vector<double> EscCheck(protein main, double t)
+{
+	// should make use of proteins internal storage for velocities and whatnot
+}

@@ -7,18 +7,18 @@ using namespace std;
 class brownsys
 {
 private:
-	protein main;
+	mainP main;
 	vector<protein> crowders;
 	vector<int> nearcntr; //stores indices of proteins near the center
 	bool crowds; 
 	int Ncr; //number of crowders
 	int steps; //number of steps taken
-	bool reaction, escape; // true if there is a reaction
 	vector<double> cvel; //center velocity
 	vector<double> cpos; //center coords before shift
 	double crad;
 	double cmass;
 	double del_t; //goes from h -> 0 
+	vector<bool> events; // contains bools for collision, escape and reaction
 public:
 	brownsys(); // creates a brownian system with one protein
 	brownsys(int num); // creates brownian system with num crowders
@@ -30,13 +30,13 @@ public:
 
 	// Dynamics
 	void moveall(mt19937& gen, normal_distribution<> distro); //String for equilibration or actual step
-	void resolvec(protein& two, double dt); // resolves collisions with center
-	void resolvec(protein& one, protein& two, double dt); // resolves collisions between two proteins
 	void shftcntr(); 
 	void printcoords(protein test);
 	double coltime(protein one, protein two);
 	double coltime(protein two);
 	void equilibrate(mt19937& gen, normal_distribution<> distro, int eqsteps);
+
+
 
 	void NCout();
 	

@@ -8,7 +8,7 @@ using namespace std;
 
 class protein
 {
-private:
+protected:
 	vector<double> coordinates;
 	vector<double> newcoords;
 	vector<double> vel;
@@ -16,31 +16,33 @@ private:
 	vector<int> notNNs;
 	double mass;
 	double radius;
-	bool crowder; // tells if particle is a crowder.
+	bool collision;
+	//bool crowder; // tells if particle is a crowder.
+	//bool escape, reaction;
 
 public:
 	
 	//CONSTRUCTOR
 	protein(); //default constructor. only contains mass and radius
-	protein(double x,double y, double z, double ms, double rad, bool crow); 
+	protein(double x,double y, double z, double ms, double rad); 
 	//~protein(); //destructor
 	
 	//Dynamics
 	
 	void move(mt19937& gen, normal_distribution<> distro);
-	void resetpos(); //sets newcoords=coords
 	void setpos(vector<double> pos); // sets coords = pos
 	void newpos(vector<double> pos); // adds newcoords + pos
-	void newpos(vector<double> nvel, double dt, string a); // adds newcoords + vel*dt
 	void newvel(vector<double> v);
-	void update();
-	bool chkreac(vector<double> center); //checks for collision with center
-	bool chkcntr(vector<double> center);	
-	bool chkcol(vector<double> pos2);
-	bool sec_col(vector<protein> &prots, int cnum);
+	vector<double> proteins::PBCswitch(int crowds, int index);
 
-	void remove_neighbor(int index);
-	void add_neighbor(int index);
+	// event handling
+
+	// double escTime();
+	// void reacTime
+	// void colTime
+	// void resVel
+	
+
 	
 	void NNout(); //Print NNs
 	
@@ -67,5 +69,22 @@ public:
 	
 	
 };
+
+class mainP : public protein
+{
+private:
+	bool escape, reaction;
+	double crad;
+
+public:
+	mainP();
+	mainP(double x,double y, double z, double ms, double rad, double centerrad);
+
+	
+	void EscReac(double& t_el, vector<bool>& events);
+	void collisions(double& t_el, vector<protein>& crowds, vector<bool>& events);
+};
+
+
 
 #endif
