@@ -11,6 +11,7 @@ class protein
 protected:
 	vector<double> coordinates;
 	vector<double> newcoords;
+	vector<double> colCoords;
 	vector<double> vel;
 	vector<int> NNs;
 	vector<int> notNNs;
@@ -33,7 +34,15 @@ public:
 	void setpos(vector<double> pos); // sets coords = pos
 	void newpos(vector<double> pos); // adds newcoords + pos
 	void newvel(vector<double> v);
-	vector<double> proteins::PBCswitch(int crowds, int index);
+	void nudge(double t);
+	void update();
+	bool colCheck(int& index, double& t, vector<protein> crowds);
+	void resolve(protein& two, double t_el, int index);
+
+	vector<double> mvVel(double t);
+	vector<double> PBCswitch(int crowds, int index);
+
+	void energy();
 
 	// event handling
 
@@ -85,6 +94,11 @@ public:
 	void collisions(double& t_el, vector<protein>& crowds, vector<bool>& events);
 };
 
+class central : public protein
+{
+private:
+	bool centered;
+};
 
 
 #endif

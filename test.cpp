@@ -10,8 +10,12 @@ int main(){
 	random_device rd; // Seed RNG
 	mt19937 gen(rd()); // start RNG
 	normal_distribution<> distro(0,pow(2*D*h,0.5));
+
 	brownsys baller(N);
-	baller.moveall(gen, distro);
+	baller.startNNs(cutoff);
+	baller.equilibrate(gen,distro,1000);
+	baller.moveall(gen, distro, 10);
+	
 
 
 	/*baller.startNNs(cutoff); // NOT FINISHED. ONLY FINDS IF ITS NEAR MAIN

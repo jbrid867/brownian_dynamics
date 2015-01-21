@@ -1,7 +1,6 @@
 // implemention files for brownsys class
 
 #include "headers/brownsys.h"
-#include "dem_funcs.cpp"
 
 
 using namespace std;
@@ -46,10 +45,7 @@ brownsys::brownsys(int num)
 	int dN=Np-num; // number of lattice points which should eventually not contain crowders
 	double l=2*L/n; // cubic lattice spacing
 	vector< int > rem(dN-1);
-	for(int i=0;i<3;i++)
-	{
-		events.push_back(false); 
-	}
+	events.push_back(false); events.push_back(false); centered=true;
 
 	for(int i=0;i<dim;i++){cvel.push_back(0);cpos.push_back(0);}
 	crad=r;
@@ -572,20 +568,54 @@ for(int i=0; i<nNNnum; i++) //CAN MAKE THIS BETTER BY LINKING PARTICLES FOR WHIC
 	
 }
 
-void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
+void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int steps)
 {
 
 	// parameters
-	double t_el=0; // elapsed time
+	double t_el=h; // elapsed time
 	double t_rem=h; // remaining time
 
+	// OUTS
+	vector<double> vi_out, vf_out, posi_out, posf_out;
+
 	// Vectors
-	vector<double> pos1(3), pos2(3);
+	vector<double> pos1=main.getv("coords"), pos2;
+	int colIndex; 
+	for(int i=0; i<steps; i++)
+	{
+		// Move main and check escape/reaction/collisions
+		main.move(gen, distro);
 
-	// Move main and check escape/reaction
-	main.move(gen, distro);
-	main.EscReac(t_el, events);
+		if(mainColCheck(colIndex, t_el))
+		{
+			cout<<"COLLISION"<<endl;
+			cout<<"E_o = ";
+			main.energy();
+			mainRes(t_el, colIndex);
+			cout<<"E_f1 = ";
+			main.energy();
+			cout<<"E_f2 = ";
+			crowders[colIndex%Ncr].energy();
+		}
+		else
+		{
+			main.update();
+		}
+	}
+	pos2=main.getv("coords");
+	cout<<pos1[0]<<" "<<pos1[1]<<" "<<pos1[2]<<" "<<endl;
+	cout<<pos2[0]<<" "<<pos2[1]<<" "<<pos2[2]<<" "<<endl;
 
+		
+	/* 
+		* index = collision check -> also moves
+		* collision resolve, including secondary
+		
+
+	// move center and check same
+
+	// move crowders and check for collisions with main and center
+	*/
 	
 	
 
@@ -594,31 +624,375 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro)
 }// end moveall
 
 
+void brownsys::mainRes(double& t_el, int index)
+{
+	// OUTS
+	vector<double> vi_out, vf_out,v2_out, pos1_out, pos2_out;
+	int indexout=index;
+	vi_out=main.getv("velocity");
+	//v2_out=crowders[index%Ncr].PBCswitch(Ncr, index);
+	pos1_out=main.getv("coords");
+	// first move main to its pre-collision location
+	main.nudge(t_el);
+	pos1_out=main.getv("coords");
+	pos2_out=crowders[index%Ncr].PBCswitch(Ncr, index);
+	cout<<"r1 = ("<<pos1_out[0]<<","<<pos1_out[1]<<","<<pos1_out[2]<<")"<<endl;
+	cout<<"r2 = ("<<pos2_out[0]<<","<<pos2_out[1]<<","<<pos2_out[2]<<")"<<endl;
+	
+	
+
+
+	// some params
+	vector<double> pos1=main.getv("coords");
+	vector<double> pos2=crowders[index%Ncr].PBCswitch(Ncr, index);
+	vector<double> vi=main.getv("velocity");
+	cout<<"v1i = ("<<vi[0]<<","<<vi[1]<<","<<vi[2]<<")"<<endl;
+	vector<double> v1f(3), v2f(3), vt(3), rhat(3);
+	vector<int> moving_particles;
+	double m1=main.getp("mass"), m2=crowders[index%Ncr].getp("mass");
+	double R1=main.getp("radius"), R2=crowders[index%Ncr].getp("radius");
+	double R=R1+R2;
+	double t_rem=h;
+	double vni, v1nf, v2nf; // the normal component of velocity
+	int index2;
+
+	//0resolved=false, 1 ismain=true, 2secmain=false, 3secondary=false;
+	vector<bool> condition(4);
+	condition[0]=false;condition[1]=true;condition[2]=false;condition[3]=false;
+
+	while(!condition[0])
+	{
+		vni=0;
+		for(int k=0; k<3; k++)
+		{
+			rhat[k]=(pos2[k]-pos1[k])/R;
+			vt[k]=vi[k]-(vi[k]*rhat[k])*rhat[k];
+			vni+=rhat[k]*vi[k];
+		}
+		v1nf = vni*(m1-m2)/(m1+m2);
+		v2nf = vni*2*m1/(m1+m2);
+		for(int k=0;k<3;k++)
+		{
+			v1f[k]=vt[k]+v1nf*rhat[k];
+			v2f[k]=v2nf*rhat[k];
+		}
+		if(condition[1])
+		{
+			main.newvel(v1f);
+			crowders[index%Ncr].newvel(v2f);
+			cout<<"v1f = ("<<v1f[0]<<","<<v1f[1]<<","<<v1f[2]<<")"<<endl;
+			cout<<"v2f = ("<<v2f[0]<<","<<v2f[1]<<","<<v2f[2]<<")"<<endl;
+			t_rem-=t_el;
+			t_el=t_rem;
+			moving_particles.push_back(index%Ncr);
+
+			// colcheck(main=true)
+		}
+		else if(condition[2])
+		{
+			crowders[index2].newvel(v1f);
+			main.newvel(v2f);
+			t_rem-=t_el;
+			t_el=t_rem;
+		}
+		else if(condition[3])
+		{
+			crowders[index2].newvel(v1f);
+			crowders[index%Ncr].newvel(v2f);
+			t_rem-=t_el;
+			t_el=t_rem;
+			moving_particles.push_back(index%Ncr);
+			// colcheck(main=false);
+		}
+		/*else // not sure about this
+		{
+			condition[0]=true;
+		}*/
+		
+			// advance newcoords of things
+		main.mvVel(t_rem);
+		for(int k=0;k<moving_particles.size();k++)
+		{
+			crowders[moving_particles[k]].mvVel(t_rem);
+		}
+
+		if(ColCheckAll(index, index2, moving_particles, t_el, condition))
+		{
+			// nudge everything to t_el
+			main.nudge(t_el);
+			for(int k=0;k<moving_particles.size();k++)
+			{
+				crowders[moving_particles[k]].nudge(t_el);
+			}
+			if(condition[1])
+			{
+				pos1=main.getv("coords");
+				pos2=crowders[index%Ncr].PBCswitch(Ncr, index);
+				vi=main.getv("velocity");
+				m1=main.getp("mass"), m2=crowders[index%Ncr].getp("mass");
+				R1=main.getp("radius"), R2=crowders[index%Ncr].getp("radius");
+				R=R1+R2;
+			}
+			else if(condition[2])
+			{
+				// i think this is unnecessary
+			}
+			else if(condition[3])
+			{
+				cout<<"SECONDARY"<<endl;
+				pos1=crowders[index2].getv("coords");
+				pos2=crowders[index%Ncr].PBCswitch(Ncr, index);
+				vi=crowders[index2].getv("velocity");
+				m1=crowders[index2].getp("mass"), m2=crowders[index%Ncr].getp("mass");
+				R1=crowders[index2].getp("radius"), R2=crowders[index%Ncr].getp("radius");
+				R=R1+R2;
+			}
+		}
+		
+		else
+		{
+			cout<<"RESOLVED"<<endl;
+			main.update();
+			//vf_out=main.getv("velocity");
+			//v2_out=crowders[indexout%Ncr].getv("velocity");
+			//cout<<"v1i = ("<<vi_out[0]<<","<<vi_out[1]<<","<<vi_out[2]<<")"<<endl;
+			//cout<<"v1f = ("<<vf_out[0]<<","<<vf_out[1]<<","<<vf_out[2]<<")"<<endl;
+			//cout<<"v2f = ("<<v2_out[0]<<","<<v2_out[1]<<","<<v2_out[2]<<")"<<endl;
+			for(int k=0;k<moving_particles.size();k++)
+			{
+				crowders[moving_particles[k]].update();
+			}
+			condition[0]=true;
+		}
+	}
+
+}
+
+bool brownsys::ColCheckAll(int& index1, int& index2, vector<int> moving_particles, double& t_el, vector<bool>& condition)
+{
+	vector<int> nns;
+	vector<double> pos2, pos1_o, pos1;
+	vector<double> vel;
+
+	double v2, r2, r2_o, vdr, R1, R2, R, rad, rad2, tm, tp;
+	bool col=false;
+
+	/*if(main.nearCenter())
+	{
+		// check stuff and set events
+	}
+	else if(main.nearReac())
+	{
+		// check other stuff and set events
+	}*/
+	if(condition[1])
+	{
+		vel=main.getv("velocity");
+		pos1_o=main.getv("coords");
+		pos1=main.getv("new coords");
+		nns=main.getNNs(true);
+		R1=main.getp("radius");
+		for(int i=0; i<nns.size();i++)
+		{	
+			v2=0, r2=0, r2_o=0, vdr=0;
+			R2=crowders[nns[i]%Ncr].getp("radius");
+			R=R1+R2;
+			pos2=crowders[nns[i]%Ncr].PBCswitch(Ncr, nns[i]);
+			for(int k=0;k<3;k++)
+			{
+				r2_o+=(pos2[k]-pos1_o[k])*(pos2[k]-pos1_o[k]);
+				r2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
+				v2+=vel[k]*vel[k];
+				vdr+=(pos2[k]-pos1_o[k])*vel[k];
+			}
+
+			if(r2<R*R)
+			{
+				rad2=vdr*vdr - v2*(r2_o - R*R);
+				if(rad2>0)
+				{
+					rad=pow(rad2,0.5);
+					tm=(vdr-rad)/v2;
+					tp=(vdr+rad)/v2;
+					if(tm>0 && tm<t_el)
+					{
+						t_el=tm;
+						col=true;
+						index1=nns[i];
+						events[0]=false;
+						events[1]=false;
+						condition[2]=false;
+						condition[3]=false;
+					}
+					else if(tp<t_el)
+					{
+						t_el=tp;
+						col=true;
+						index1=nns[i];
+						events[0]=false;
+						events[1]=false;
+						condition[2]=false;
+						condition[3]=false;
+					}
+				}
+			}
+		}
+		if(!col)
+		{
+			condition[1]=false;
+		}
+	}
+
+	for(int i=0; i<moving_particles.size(); i++)
+	{
+		vel=crowders[moving_particles[i]].getv("velocity");
+		pos1_o=crowders[moving_particles[i]].getv("coords");
+		pos1=crowders[moving_particles[i]].getv("new coords");
+		nns=crowders[moving_particles[i]].getNNs(true);
+		R1=crowders[moving_particles[i]].getp("radius");
+		// check for collisions with other crowders
+		for(int j=0; j<nns.size();j++)
+		{	
+			v2=0, r2=0, r2_o=0, vdr=0;
+			R2=crowders[nns[j]%Ncr].getp("radius");
+			R=R1+R2;
+			pos2=crowders[nns[j]%Ncr].PBCswitch(Ncr, nns[j]);
+			for(int k=0;k<3;k++)
+			{
+				r2_o+=(pos2[k]-pos1_o[k])*(pos2[k]-pos1_o[k]);
+				r2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
+				v2+=vel[k]*vel[k];
+				vdr+=(pos2[k]-pos1_o[k])*vel[k];
+			}
+
+			if(r2<R*R)
+			{
+				rad2=vdr*vdr - v2*(r2_o - R*R);
+				if(rad2>0)
+				{
+					rad=pow(rad2,0.5);
+					tm=(vdr-rad)/v2;
+					tp=(vdr+rad)/v2;
+					if(tm>0 && tm<t_el)
+					{
+						t_el=tm;
+						col=true;
+						index1=nns[j];
+						index2=moving_particles[i];
+						events[0]=false;
+						events[1]=false;
+						condition[1]=false;
+						condition[2]=false;
+						condition[3]=true;
+					}
+					else if(tp<t_el)
+					{
+						t_el=tp;
+						col=true;
+						index1=nns[j];
+						index2=moving_particles[i];
+						events[0]=false;
+						events[1]=false;
+						condition[1]=false;
+						condition[2]=false;
+						condition[3]=true;
+					}
+				}
+			}
+		}
+		//later, check for collision with center and main
+	}
+	return col;
+}
+
+bool brownsys::mainColCheck(int& index, double& t_el)
+{
+
+	vector<int> nns=main.getNNs(true);
+	vector<double> pos2(3), pos1_o=main.getv("coords"), pos1=main.getv("new coords");
+	vector<double> vel=main.getv("velocity");
+
+	double v2, r2, r2_o, vdr, R1=main.getp("radius"), R2, R, rad, rad2, tm, tp;
+	bool col=false;
+
+	/*if(main.nearCenter())
+	{
+		// check stuff and set events
+	}
+	else if(main.nearReac())
+	{
+		// check other stuff and set events
+	}*/
+
+	for(int i=0; i<nns.size();i++)
+	{	
+		v2=0, r2=0, r2_o=0, vdr=0;
+		R2=crowders[nns[i]%Ncr].getp("radius");
+		R=R1+R2;
+		pos2=crowders[nns[i]%Ncr].PBCswitch(Ncr, nns[i]);
+		for(int k=0;k<3;k++)
+		{
+			r2_o+=(pos2[k]-pos1_o[k])*(pos2[k]-pos1_o[k]);
+			r2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
+			v2+=vel[k]*vel[k];
+			vdr+=(pos2[k]-pos1_o[k])*vel[k];
+		}
+
+		if(pow(r2,0.5)<R)
+		{
+			rad2=vdr*vdr - v2*(r2_o - R*R);
+			if(rad2>0)
+			{
+				rad=pow(rad2,0.5);
+				tm=(vdr-rad)/v2;
+				tp=(vdr+rad)/v2;
+				if(tm>0 && tm<t_el)
+				{
+					t_el=tm;
+					col=true;
+					index=nns[i];
+					events[0]=false;
+					events[1]=false;
+				}
+				else if(tp<t_el)
+				{
+					t_el=tp;
+					col=true;
+					index=nns[i];
+					events[0]=false;
+					events[1]=false;
+				}
+			}
+		}
+	}
+	return col;
+}
+
 
 void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqsteps)
 {
 	vector<double> pos1(3), pos2(3), posm(3), disp(3), PBCvec(3);
 	vector<int> nns;
-	int numnns, count, clashcount=0;
+	int numnns, count, clashcount=0, counter=0;
 	bool clash;
 	double mag, mag2, r1, r2;
 
 	posm=main.getv("coords");
 
-	vector<double> PDFunc=PDF1(crowders, Ncr);
+	/*vector<double> PDFunc=PDF1(crowders, Ncr);
 	ofstream pdf;
 	pdf.open("pdfbeg.txt");
 	for(int i=0;i<PDFunc.size();i++)
 	{
 		pdf << PDFunc[i] << endl;
 	}
-	pdf.close();
+	pdf.close();*/
 
 
 
 	for(int i=0;i<eqsteps;i++) // should be while !equilibrated
 	{cout<<"equilibration step # "<<i<<endl;
-	for(int k=0;k<Ncr;k++){
+	for(int k=0;k<Ncr;k++){counter++;
 		
 		nns=crowders[k].getNNs(true);
 		numnns=nns.size();
@@ -646,10 +1020,10 @@ void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqste
 		{	
 						
 			mag2=0; mag=0;
-			pos2=crowders[nns[count]%Ncr].getv("coords");
-			PBCvec = PBCswitch(Ncr, nns[count]);
+			pos2=crowders[nns[count]%Ncr].PBCswitch(Ncr, nns[count]);
+			//PBCvec = pbc(Ncr, nns[count]); // removed for new PBCswitch function
 
-			for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[dumb]-(pos2[dumb]+PBCvec[dumb]))*(pos1[dumb]-(pos2[dumb]+PBCvec[dumb])); } //
+			for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[dumb]-pos2[dumb])*(pos1[dumb]-pos2[dumb]);} //
 			mag=pow(mag2,0.5);
 			if(mag<crowders[k].getp("radius")+crowders[nns[count]%Ncr].getp("radius"))
 			{clash=true; clashcount++;}
@@ -660,7 +1034,8 @@ void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqste
 
 	}}//ends eqsteps and Ncr for loops
 cout<<"clash count = "<<clashcount<<endl;
-
+cout<<counter<<endl;
+/*
 PDFunc=PDF1(crowders, Ncr);
 ofstream pdfe;
 pdfe.open("./outs/pdfend10.txt");
@@ -669,7 +1044,7 @@ for(int i=0;i<PDFunc.size();i++)
 	pdfe << PDFunc[i] << endl;
 }
 pdfe.close();
-
+*/
 
 
 

@@ -15,5 +15,4 @@ par: test.cpp
 	${CC} -c test.cpp ${OMP}
 	${CC} -c proteins.cpp ${OMP} 
 	${CC} -c brownsys.cpp ${OMP}
-	${CC} -c dem_funcs.cpp ${OMP}
 	${CC} -o run test.o proteins.o brownsys.o ${OMP} 
