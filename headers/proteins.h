@@ -6,7 +6,7 @@
 
 using namespace std;
 
-class protein
+class protein // for all intents and purposes, this is a crowder
 {
 protected:
 	vector<double> coordinates;
@@ -17,10 +17,10 @@ protected:
 	vector<int> notNNs;
 	double mass;
 	double radius;
-	bool collision;
-	//bool crowder; // tells if particle is a crowder.
-	//bool escape, reaction;
+	bool nearcenter;
+	double cdist; // distance from center
 
+	
 public:
 	
 	//CONSTRUCTOR
@@ -30,34 +30,20 @@ public:
 	
 	//Dynamics
 	
-	void move(mt19937& gen, normal_distribution<> distro);
+	void move(mt19937& gen, normal_distribution<> distro); // brownian displacement for protein
 	void setpos(vector<double> pos); // sets coords = pos
-	void newpos(vector<double> pos); // adds newcoords + pos
-	void newvel(vector<double> v);
-	void nudge(double t);
-	void update();
-	bool colCheck(int& index, double& t, vector<protein> crowds);
-	void resolve(protein& two, double t_el, int index);
-
-	vector<double> mvVel(double t);
-	vector<double> PBCswitch(int crowds, int index);
-
-	void energy();
-
-	// event handling
-
-	// double escTime();
-	// void reacTime
-	// void colTime
-	// void resVel
-	
-
-	
-	void NNout(); //Print NNs
+	void newvel(vector<double> v); // sets velocity
+	void nudge(double t); //moves coords by v*t
+	void update(); // sets coords=newcoords
+	bool nearcntr(); // checks if protein is near the central particle
 	
 	
-	//vector<double> resolve(vector<double> p2); //resolves collision with another protein
-	//vector<double> resolve(); //resolves collision with center
+
+	vector<double> mvVel(double t); // returns coords of v*t_remaining
+	vector<double> PBCswitch(int crowds, int index); // returns periodic coords
+
+	//debugging and outputs
+	void energy(); // prints the energy
 	
 	
 	//Access 
@@ -67,13 +53,6 @@ public:
 	 
 	vector<int> getNNs(bool nn); //true=NNs, false=notNNs
 	void setNNs(vector<int> nns, vector<int> nnns); // sets NNs and notNNs
-
-	
-	
-	
-	
-	
-	
 	
 	
 	
@@ -82,16 +61,15 @@ public:
 class mainP : public protein
 {
 private:
-	bool escape, reaction;
+	bool escape; // if main is near q, true
 	double crad;
 
 public:
 	mainP();
 	mainP(double x,double y, double z, double ms, double rad, double centerrad);
 
-	
-	void EscReac(double& t_el, vector<bool>& events);
-	void collisions(double& t_el, vector<protein>& crowds, vector<bool>& events);
+	bool nearEsc();
+
 };
 
 class central : public protein
