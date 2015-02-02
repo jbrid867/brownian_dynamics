@@ -18,11 +18,8 @@ protected:
 	double mass;
 	double radius;
 	bool nearcenter;
-	double cdist; // distance from center
-
-	
-public:
-	
+	double cdist; // distance from center	
+public:	
 	//CONSTRUCTOR
 	protein(); //default constructor. only contains mass and radius
 	protein(double x,double y, double z, double ms, double rad); 
@@ -36,6 +33,7 @@ public:
 	void nudge(double t); //moves coords by v*t
 	void update(); // sets coords=newcoords
 	bool nearcntr(); // checks if protein is near the central particle
+	void shift(vector<double> cpos, vector<protein>& crowders);
 	
 	
 
@@ -69,6 +67,7 @@ public:
 	mainP(double x,double y, double z, double ms, double rad, double centerrad);
 
 	bool nearEsc();
+	void upmain();
 
 };
 
@@ -76,6 +75,8 @@ class central : public protein
 {
 private:
 	bool centered;
+
+
 };
 
 

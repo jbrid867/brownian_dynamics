@@ -82,10 +82,11 @@ void protein::setNNs(vector<int> nns, vector<int> nnns)
 
 vector<double> protein::getv(string a)
 {
+	vector<double> blank(3);
 	if(a=="coords"){return coordinates;}
 	else if(a=="new coords"){return newcoords;}
 	else if(a=="velocity"){return vel;}
-	else{cout<<a<<" is not a thing"<<endl; return vector<double>(3);}
+	else{cout<<a<<" is not a thing"<<endl; return blank;}
 	
 	
 }
@@ -116,8 +117,12 @@ void protein::move(mt19937& gen, normal_distribution<> distro)
 	newcoords[0]=coordinates[0]+xx; vel[0]=xx/h;
 	newcoords[1]=coordinates[1]+yy; vel[1]=yy/h;
 	newcoords[2]=coordinates[2]+zz; vel[2]=zz/h;
-		
+	double mag2=xx*xx+yy*yy+zz*zz;
+	double mag=pow(mag2,0.5);
+	//cout<<"step magnitude = "<<mag<<endl;
 }
+
+
 
 void protein::setpos(vector<double> pos)
 {
@@ -147,9 +152,19 @@ vector<double> protein::PBCswitch(int crowds, int index)
 
 void protein::update()
 {
+	double mag2=0,mag;
 	for(int i=0; i<3; i++)
 	{
 		coordinates[i]=newcoords[i];
+		mag2+=coordinates[i]*coordinates[i];
+	}
+	if(pow(mag2,0.5)<4*radius)
+	{
+		nearcenter=true;
+	}
+	else
+	{
+		nearcenter=false;
 	}
 }
 
@@ -186,9 +201,65 @@ void protein::energy()
 	cout<<E<<endl;
 }
 
+void protein::shift(vector<double> cpos, vector<protein>& crowders)
+{
+	vector<bool> pbcs(6);
+	vector<int> nns;
+	pbcs[0]=false;pbcs[1]=false;pbcs[2]=false;
+	pbcs[3]=false;pbcs[4]=false;pbcs[5]=false;
+	for(int i=0;i<3;i++)
+	{
+		coordinates[i]-=cpos[i];
+		if(coordinates[i]>L)
+		{
+			coordinates[i]-=2*L;
+			pbcs[2*i]=true;
+		}
+		else if(coordinates[i]<-1.0*L)
+		{
+			coordinates[i]+=2*L;
+			pbcs[2*i+1]=true;
+		}
+	}
+	/*for(int i=0;i<6;i++)
+	{
+		if(pbcs[i])
+		{
+			nns=
+		}
+	}*/
+}
+
 // mainP functions
 
 bool mainP::nearEsc()
 {
 	return escape;
+}
+
+void mainP::upmain()
+{
+	double mag2=0,mag;
+	for(int i=0; i<3; i++)
+	{
+		coordinates[i]=newcoords[i];
+		mag2+=coordinates[i]*coordinates[i];
+	}
+	mag=pow(mag2,0.5);
+	if(mag<5*radius)
+	{
+		nearcenter=true;
+	}
+	else
+	{
+		nearcenter=false;
+	}
+	if(mag>q-5*radius)
+	{
+		escape=true;
+	}
+	else
+	{
+		escape=false;
+	}
 }

@@ -41,8 +41,7 @@ const int N=floor(phi*pow(2.0*L,3.0)/((4.0/3.0)*pi*pow(rc,3.0)));
 
 
 const double vrms = pow(3*k*T/M,0.5); //rms velocity
-const double h = pow(10,-13); //time step
-
+const double h = 5*pow(10,-14); //time step
 const int dim=3; //DIMENSION
 #endif
 

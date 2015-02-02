@@ -127,6 +127,11 @@ brownsys::brownsys(int num)
 
 }
 
+brownsys::~brownsys()
+{
+	cout<<"system removed"<<endl;
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -560,9 +565,8 @@ void brownsys::updateNNs(double cut)
 	} // ends j loop for crowder nearest neighbor update	
 } // ends NNupdate
 
-void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int steps)
+void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int& betacount)
 {
-
 	// parameters
 	double t_el=h; // elapsed time
 	double t_rem=h; // remaining time
@@ -571,197 +575,517 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int steps)
 	vector<double> vi_out, vf_out, posi_out, posf_out;
 
 	// Vectors
+	vector<int> empty;
 	
-	int colIndex; 
-	for(int i=0; i<steps; i++)
+	int colIndex, counter=0; 
+	
+	while(!events[0] && !events[1])
 	{
+		if((counter)%10==0)
+		{
+			updateNNs(3*pow(10,-10));
+		}
 		// Move main and check escape/reaction/collisions
 		main.move(gen, distro);
-
 		if(mainColCheck(colIndex, t_el))
 		{
-			cout<<"COLLISION"<<endl;
-			mainRes(t_el, colIndex);
-			
+			//cout<<"collision"<<endl;
+			mainRes(t_el, colIndex, 0, empty);	
 		}
-		else
+		if(!events[0] && !events[1])
 		{
-			main.update();
+			for(int j=0; j<Ncr; j++) // move all crowders
+			{
+				moveCrowd(j, gen, distro);
+			}
+			for(int j=0;j<3;j++) // move center
+			{
+				ncpos[j]=distro(gen);
+				cvel[j]=ncpos[j]/h;	
+			}
+			centered=false;
+			cColCheck();
 		}
+		counter++;
 	}
-	
+	if(events[0])
+	{
+		cout<<"reaction"<<endl;
+		cout<<counter<<endl;
+		betacount++;
+	}
+	if(events[1])
+	{
+		cout<<"escape"<<endl;
+		cout<<counter<<endl;
+	}	
 	
 }// end moveall
 
-
-void brownsys::mainRes(double& t_el, int index)
+/*void brownsys::mainCheck(int index, double& t_el)
 {
-	// OUTS
-	vector<double> vi_out, vf_out,v2_out, pos1_out, pos2_out;
-	// first move main to its pre-collision location
-	main.nudge(t_el);
-	
-	
+	vector<double> pos1=crowders[index].getv
+}*/
 
-
-	// some params
-	vector<double> pos1=main.getv("coords");
-	vector<double> pos2=crowders[index%Ncr].PBCswitch(Ncr, index);
-	vector<double> vi=main.getv("velocity");
-	vector<double> v1f(3), v2f(3), vt(3), rhat(3);
-	vector<int> moving_particles;
-	double m1=main.getp("mass"), m2=crowders[index%Ncr].getp("mass");
-	double R1=main.getp("radius"), R2=crowders[index%Ncr].getp("radius");
-	double R=R1+R2;
-	double t_rem=h;
-	double vni, v1nf, v2nf; // the normal component of velocity
-	int index2;
-
-	// conditions for collision resolution
-	// [0] - Resolved, initial = false
-	// [1] - main collision with crowder, initial = true
-	// [2] - secondary collision with main, initial = false
-	// [3] - secondary collision with crowder, initial = false
-	// [4] - secondary collision with center, initial = false
-	// [5] - center secondary collision, initial = false
-	///////////////////////////////////////////////////////////
-	vector<bool> condition(5);
-	condition[0]=false;condition[1]=true;
-	condition[2]=false;condition[3]=false;
-	condition[4]=false;condition[5]=false;
-
-	while(!condition[0])
+void brownsys::cColCheck()
+{
+	vector<double> pos2;
+	double t_el=h, mag2, mag, R, vdr, r2, rad2, rad, v2,tm,tp;
+	bool col=false, esc=false, reac=false;
+	vector<int> moving_particles(1);
+	for(int i=0; i<nearcntr.size(); i++)
 	{
-		vni=0;
-		for(int k=0; k<3; k++)
-		{
-			rhat[k]=(pos2[k]-pos1[k])/R;
-			vni+=rhat[k]*vi[k];
-		}
-		v1nf = vni*(m1-m2)/(m1+m2);
-		v2nf = vni*2*m1/(m1+m2);
+		vdr=0, r2=0, v2=0;
+		pos2=crowders[nearcntr[i]].getv("coords");
+		R=crad+crowders[nearcntr[i]].getp("radius");
 		for(int k=0;k<3;k++)
 		{
-			vt[k]=vi[k]-vni*rhat[k];
-			v1f[k]=vt[k]+v1nf*rhat[k];
-			v2f[k]=v2nf*rhat[k];
+			mag2+=(pos2[k]-ncpos[k])*(pos2[k]-ncpos[k]);
 		}
-		if(condition[1])
+		if(pow(mag2,0.5)<R)
 		{
-			
-			main.newvel(v1f);
-			crowders[index%Ncr].newvel(v2f);
-			t_rem-=t_el;
-			t_el=t_rem;
-			moving_particles.push_back(index%Ncr);
-
-			
-		}
-		else if(condition[3])
-		{
-			crowders[index2].newvel(v1f);
-			crowders[index%Ncr].newvel(v2f);
-			t_rem-=t_el;
-			t_el=t_rem;
-			moving_particles.push_back(index%Ncr);
-			
-		}
-		else if(condition[2])
-		{
-			crowders[index2].newvel(v1f);
-			main.newvel(v2f);
-			t_rem-=t_el;
-			t_el=t_rem;
-		}
-		
-		else if(condition[4])
-		{
-			crowders[index2].newvel(v1f);
-			cvel=v2f;
-			t_rem-=t_el;
-			t_el=t_rem;
-			condition[5]=true;
-		}
-		
-		
-			// advance newcoords of things
-		main.mvVel(t_rem);
-		for(int k=0;k<moving_particles.size();k++)
-		{
-			crowders[moving_particles[k]].mvVel(t_rem);
-		}
-		if(condition[5])
-		{
-			for(int op=0;op<3;op++)
+			for(int k=0;k<3;k++)
 			{
-				ncpos[op]=cpos[op]+cvel[op]*t_rem;
+				r2+=(pos2[k]-cpos[k])*(pos2[k]-cpos[k]);
+				vdr+=(pos2[k]-cpos[k])*cvel[k];
+				v2+=cvel[k]*cvel[k];
 			}
-		}
-
-		if(ColCheckAll(index, index2, moving_particles, t_el, condition))
-		{
-			// nudge everything to t_el
-			main.nudge(t_el);
-			for(int k=0;k<moving_particles.size();k++)
+			rad2=vdr*vdr-v2*(r2-R*R);
+			if(rad2>0)
 			{
-				crowders[moving_particles[k]].nudge(t_el);
-			}
-			if(condition[5])
-			{
-				for(int op=0;op<3;op++)
+				rad=pow(rad2,0.5);
+				tm=(vdr-rad)/v2;
+				tp=(vdr+rad)/v2;
+				if(tm>0 && tm<t_el)
 				{
-					cpos[op]+=cvel[op]*t_el;
+					col=true;
+					esc=false;
+					reac=false;
+					t_el=tm;
+					moving_particles[0]=nearcntr[i];
+				}
+				else if(tp>0 && tp<t_el)
+				{
+					col=true;
+					esc=false;
+					reac=false;
+					t_el=tp;
+					moving_particles[0]=nearcntr[i];
 				}
 			}
-			if(condition[1])
-			{
-				cout<<"SECOND MAIN"<<endl;
-				pos1=main.getv("coords");
-				pos2=crowders[index%Ncr].PBCswitch(Ncr, index);
-				vi=main.getv("velocity");
-				m1=main.getp("mass"), m2=crowders[index%Ncr].getp("mass");
-				R1=main.getp("radius"), R2=crowders[index%Ncr].getp("radius");
-				R=R1+R2;
-			}
-			else if(condition[2])
-			{
-				// i think this is unnecessary
-			}
-			else if(condition[3])
-			{
-				cout<<"SECONDARY"<<endl;
-				pos1=crowders[index2].getv("coords");
-				pos2=crowders[index%Ncr].PBCswitch(Ncr, index);
-				vi=crowders[index2].getv("velocity");
-				m1=crowders[index2].getp("mass"), m2=crowders[index%Ncr].getp("mass");
-				R1=crowders[index2].getp("radius"), R2=crowders[index%Ncr].getp("radius");
-				R=R1+R2;
-			}
-			else if (condition[4])
-			{
-				cout<<"CENTER COLLISION"<<endl;
-				pos1=crowders[index2].getv("coords");
-				pos2=cpos;
-				vi=crowders[index2].getv("velocity");
-				m1=crowders[index2].getp("mass"), m2=cmass;
-				R1=crowders[index2].getp("radius"), R2=crad;
-				R=R1+R2;
-			}
+
 		}
-		
-		else
+	}
+	if(col)
+	{
+		mainRes(t_el, moving_particles[0], 4, moving_particles);
+	}
+}
+
+
+void brownsys::moveCrowd(int j ,mt19937& gen, normal_distribution<> distro)
+{
+	crowders[j].move(gen, distro);
+	vector<double> pos1=crowders[j].getv("new coords"), pos2;
+	vector<int> nns=crowders[j].getNNs(true);
+	double R1=crowders[j].getp("radius"), R2, mag2=0, mag;
+	bool clear=true;
+	bool collision=false;
+
+	for(int i=0;i<nns.size();i++)
+	{
+		pos2=crowders[nns[i]%Ncr].PBCswitch(Ncr, nns[i]);
+		R2=crowders[nns[i]%Ncr].getp("radius");
+		for(int k=0;k<3;k++)
 		{
-			cout<<"RESOLVED"<<endl;
-			condition[0]=true;
-			upall(moving_particles);
+			mag2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
 		}
+		mag=pow(mag2,0.5);
+		if(mag<R1+R2)
+		{
+			clear=false;
+		}
+	}
+	if(clear) //check main & center
+	{
+		crColCheck(j);
 	}
 
 }
 
+void brownsys::crColCheck(int j)
+{
+	bool mcol=false, ccol=false, col=false;
+	vector<double> pos1=crowders[j].getv("new coords");
+	vector<double> pos=crowders[j].getv("coords");
+	vector<double> mpos=main.getv("coords");
+	double R1=crowders[j].getp("radius"), Rm=main.getp("radius");
+	double rm2=0, rc2=0, rm, Rc, t_el=h, t_rem=h, vdr=0, Rsq=0, v2=0, dr2=0;
+	double tmain, tcen, rad2, rad, R, tm, tp;
+	vector<double> v1;
+	vector<int>moving_particles;
+	moving_particles.push_back(j);
+
+	for(int k=0;k<3;k++)
+	{
+		rm2+=(mpos[k]-pos1[k])*(mpos[k]-pos1[k]);
+		rc2+=(cpos[k]-pos1[k])*(cpos[k]-pos1[k]);
+	}
+	if(pow(rm2,0.5)<R1+Rm)
+	{	
+		v1=crowders[j].getv("velocity");
+		mcol=true;
+		R=Rm+R1;
+		for(int k=0; k<3;k++)
+		{
+			vdr+=v1[k]*(mpos[k]-pos[k]);
+			v2+=v1[k]*v1[k];
+			dr2+=(mpos[k]-pos[k])*(mpos[k]-pos[k]);
+		}
+		rad2=vdr*vdr - v2*(dr2-R*R);
+		if(rad2>0)
+		{
+			rad=pow(rad2,0.5);
+			tp=(vdr+rad)/v2;
+			tm=(vdr-rad)/v2;
+			if(tm>0 && tm<t_el)
+			{
+				t_el=tm;
+				col=true;
+			}
+			else if(tp>0 && tp<t_el)
+			{
+				t_el=tp;
+				col=true;
+			}
+		}
+	}
+	if(pow(rc2,0.5)<R1+crad)
+	{
+		v1=crowders[j].getv("velocity");
+		ccol=true;
+		R=crad+R1;
+		for(int k=0; k<3;k++)
+		{
+			vdr+=v1[k]*(mpos[k]-pos[k]);
+			v2+=v1[k]*v1[k];
+			dr2+=(mpos[k]-pos[k])*(mpos[k]-pos[k]);
+		}
+		rad2=vdr*vdr - v2*(dr2-R*R);
+		if(rad2>0)
+		{
+			rad=pow(rad2,0.5);
+			tp=(vdr+rad)/v2;
+			tm=(vdr-rad)/v2;
+			if(tm>0 && tm<t_el)
+			{
+				t_el=tm;
+				mcol=false;
+				col=true;
+			}
+			else if(tp>0 && tp<t_el)
+			{
+				t_el=tp;
+				mcol=false;
+				col=true;
+			}
+		}
+	}
+	if(mcol)
+	{
+		mainRes(t_el, -1, 2, moving_particles);
+	}
+	else if(ccol)
+	{
+		mainRes(t_el, -1, 3, moving_particles);
+	}
+}
+
+void brownsys::mainRes(double& t_el, int index, int colSwitch, vector<int> moving_particles)
+{
+	// first move initial particle to its pre-collision location
+	
+
+	// some initial params
+	vector<double> pos1(3), pos2(3), vi(3), v1f(3), v2f(3), vt(3), rhat(3);
+	double m1, m2, R1, R2, R;
+	double t_rem=h, vni, v1nf, v2nf;
+	int index2;
+
+	vector<bool> condition(4);
+	if(colSwitch==0)
+	{
+		condition[0]=false;condition[1]=true;
+		condition[2]=true;condition[3]=false;
+		main.nudge(t_el);
+	}
+	else if(colSwitch==2)
+	{
+		condition[0]=false;condition[1]=true;
+		condition[2]=true;condition[3]=false;
+		crowders[moving_particles[0]].nudge(t_el);
+		index2=moving_particles[0];
+	}
+	else if(colSwitch==3)
+	{
+		condition[0]=false;condition[1]=false;
+		condition[2]=true;condition[3]=true;
+		crowders[moving_particles[0]].nudge(t_el);
+		index2=moving_particles[0];
+	}
+	else if(colSwitch==4)
+	{
+		condition[0]=false;condition[1]=false;
+		condition[2]=true;condition[3]=true;
+		for(int i=0;i<3;i++){cpos[i]+=cvel[i]*t_el;} // nudge center
+	}
+	int maincount=0;
+
+	///////////////////////////////////////////////////////////
+	// Tracking conditions
+	// [0] - Resolved, initial = false
+	// [1] - Tracking main, initial = true
+	// [2] - Tracking crowders, initial = true
+	// [3] - Tracking center, initial = false
+	///////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////
+	// colSwitch values
+	// 0=main collision -> INITIAL
+	// 1=crowder collisions
+	// 2=crowder collision with main
+	// 3=crowder collision with center
+	// 4=center collision with crowder
+	///////////////////////////////////////////////////////////
+
+	while(!condition[0])
+	{
+		vni=0;
+		if(!events[0] && !events[1])
+		{
+			switch (colSwitch)
+			{
+				case 0:  // main collision	
+					//cout<<"m-cr"<<endl;
+					maincount++;
+					pos1=main.getv("coords");
+					pos2=crowders[index%Ncr].PBCswitch(Ncr, index);
+					vi=main.getv("velocity");
+					m1=main.getp("mass"), m2=crowders[index%Ncr].getp("mass");
+					R1=main.getp("radius"), R2=crowders[index%Ncr].getp("radius");
+					R=R1+R2;
+
+					/////Velocity Calculation
+					for(int k=0; k<3; k++)
+					{
+						rhat[k]=(pos2[k]-pos1[k])/R;
+						vni+=rhat[k]*vi[k];
+					}
+					v1nf = vni*(m1-m2)/(m1+m2);
+					v2nf = vni*2*m1/(m1+m2);
+					for(int k=0;k<3;k++)
+					{
+						vt[k]=vi[k]-vni*rhat[k];
+						v1f[k]=vt[k]+v1nf*rhat[k];
+						v2f[k]=v2nf*rhat[k];
+					}
+
+					////// Set new velocities
+					main.newvel(v1f);
+					crowders[index%Ncr].newvel(v2f);
+					t_rem-=t_el;
+					t_el=t_rem;
+					moving_particles.push_back(index%Ncr);	
+
+					break;
+				
+				case 1: // crowd-crowd collision
+					//cout<<"cr-cr"<<endl;
+					pos1=crowders[index2].getv("coords");
+					pos2=crowders[index%Ncr].PBCswitch(Ncr, index);
+					vi=crowders[index2].getv("velocity");
+					m1=crowders[index2].getp("mass"), m2=crowders[index%Ncr].getp("mass");
+					R1=crowders[index2].getp("radius"), R2=crowders[index%Ncr].getp("radius");
+					R=R1+R2;
+
+					/////Velocity Calculation
+					for(int k=0; k<3; k++)
+					{
+						rhat[k]=(pos2[k]-pos1[k])/R;
+						vni+=rhat[k]*vi[k];
+					}
+					v1nf = vni*(m1-m2)/(m1+m2);
+					v2nf = vni*2*m1/(m1+m2);
+					for(int k=0;k<3;k++)
+					{
+						vt[k]=vi[k]-vni*rhat[k];
+						v1f[k]=vt[k]+v1nf*rhat[k];
+						v2f[k]=v2nf*rhat[k];
+					}
+
+					////// Set new velocities
+					crowders[index2].newvel(v1f);
+					crowders[index%Ncr].newvel(v2f);
+					t_rem-=t_el;
+					t_el=t_rem;
+					moving_particles.push_back(index%Ncr);	
+
+					break;
+					
+				case 2: // crowd-main collision
+					//cout<<"cr-m"<<endl;
+					pos1=crowders[index2].getv("coords");
+					pos2=main.getv("coords");
+					vi=crowders[index2].getv("velocity");
+					m1=crowders[index2].getp("mass"), m2=main.getp("mass");
+					R1=crowders[index2].getp("radius"), R2=main.getp("radius");
+					R=R1+R2;
+
+					/////Velocity Calculation
+					for(int k=0; k<3; k++)
+					{
+						rhat[k]=(pos2[k]-pos1[k])/R;
+						vni+=rhat[k]*vi[k];
+					}
+					v1nf = vni*(m1-m2)/(m1+m2);
+					v2nf = vni*2*m1/(m1+m2);
+					for(int k=0;k<3;k++)
+					{
+						vt[k]=vi[k]-vni*rhat[k];
+						v1f[k]=vt[k]+v1nf*rhat[k];
+						v2f[k]=v2nf*rhat[k];
+					}
+
+					////// Set new velocities
+					crowders[index2].newvel(v1f);
+					main.newvel(v2f);
+					t_rem-=t_el;
+					t_el=t_rem;	
+
+					break;
+				
+				case 3: // crowd-center collision
+					//cout<<"cr-cn"<<endl;
+					pos1=crowders[index2].getv("coords");
+					pos2=cpos;
+					vi=crowders[index2].getv("velocity");
+					m1=crowders[index2].getp("mass"), m2=cmass;
+					R1=crowders[index2].getp("radius"), R2=crad;
+					R=R1+R2;
+
+					/////Velocity Calculation
+					for(int k=0; k<3; k++)
+					{
+						rhat[k]=(pos2[k]-pos1[k])/R;
+						vni+=rhat[k]*vi[k];
+					}
+					v1nf = vni*(m1-m2)/(m1+m2);
+					v2nf = vni*2*m1/(m1+m2);
+					for(int k=0;k<3;k++)
+					{
+						vt[k]=vi[k]-vni*rhat[k];
+						v1f[k]=vt[k]+v1nf*rhat[k];
+						v2f[k]=v2nf*rhat[k];
+					}
+
+					////// Set new velocities
+					crowders[index2].newvel(v1f);
+					cvel=v2f;
+					t_rem-=t_el;
+					t_el=t_rem;
+
+					break;
+
+				case 4: // center-crowd collision
+					//cout<<"cn-cr"<<endl;
+					pos1=cpos;
+					pos2=crowders[index].getv("coords");
+					vi=cvel;
+					m1=cmass, m2=crowders[index].getp("mass");
+					R1=crad, R2=crowders[index].getp("radius");
+					R=R1+R2;
+
+					/////Velocity Calculation
+					for(int k=0; k<3; k++)
+					{
+						rhat[k]=(pos2[k]-pos1[k])/R;
+						vni+=rhat[k]*vi[k];
+					}
+					v1nf = vni*(m1-m2)/(m1+m2);
+					v2nf = vni*2*m1/(m1+m2);
+					for(int k=0;k<3;k++)
+					{
+						vt[k]=vi[k]-vni*rhat[k];
+						v1f[k]=vt[k]+v1nf*rhat[k];
+						v2f[k]=v2nf*rhat[k];
+					}
+
+					////// Set new velocities
+					cvel=v1f;
+					crowders[index].newvel(v2f);
+					t_rem-=t_el;
+					t_el=t_rem;	
+
+					break;
+			}// end switch
+			
+			// advance newcoords of things
+			if(condition[1])
+			{
+				main.mvVel(t_rem);
+			}
+			if(condition[2])
+			{
+				for(int k=0;k<moving_particles.size();k++)
+				{
+					crowders[moving_particles[k]].mvVel(t_rem);
+				}
+			}
+			if(condition[3])
+			{
+				for(int op=0;op<3;op++)
+				{
+					ncpos[op]=cpos[op]+cvel[op]*t_rem;
+				}
+				centered=false;
+			}
+
+			if(ColCheckAll(colSwitch, index, index2, moving_particles, t_el, condition))
+			{
+				// nudge all tracked particles to t_el
+				if(condition[1]) // advance main
+				{
+					main.nudge(t_el);
+				} 
+				if(condition[2]) // advance crowders
+				{
+					for(int k=0;k<moving_particles.size();k++)
+					{
+						crowders[moving_particles[k]].nudge(t_el);
+					}
+				}
+				if(condition[3]) // advance center
+				{
+					for(int i=0;i<3;i++)
+					{
+						cpos[i]+=cvel[i]*t_el;
+					}
+				}
+			}
+			else if(!centered)
+			{
+				shftcntr();
+			}
+		}
+		else
+		{
+			condition[0]=true;
+		}
+	}
+}
+
 void brownsys::upall(vector<int> moving_particles)
 {
-	main.update();
+	main.upmain();
 			
 	for(int k=0;k<moving_particles.size();k++)
 	{
@@ -778,81 +1102,31 @@ void brownsys::upall(vector<int> moving_particles)
 	
 }
 
-bool brownsys::ColCheckAll(int& index1, int& index2, vector<int> moving_particles, double& t_el, vector<bool>& condition)
+void brownsys::shftcntr()
+{
+	for(int i=0;i<crowders.size();i++)
+	{
+		crowders[i].shift(cpos, crowders);
+	}
+	main.shift(cpos, crowders);
+	for(int j=0;j<3;j++){cpos[j]=0;ncpos[j]=0;}
+	centered=true;
+}
+
+bool brownsys::ColCheckAll(int& switcher, int& index1, int& index2, vector<int> moving_particles, double& t_el, vector<bool>& condition)
 {
 	vector<int> nns;
 	vector<double> pos2, pos1_o, pos1;
 	vector<double> vel;
 
 	double v2, r2, r2_o, vdr, R1, R2, R, rad, rad2, tm, tp;
-	bool col=false;
+	// dumby bools for collisions
+	bool maincol=false, cCol=false, crCol=false, crCol2=false, col=false;
+
+	int num=moving_particles.size();
+	
 
 	// check for reaction/escape
-	if(main.nearcntr())
-	{
-		v2=0, r2=0, r2_o=0, vdr=0;
-		R2=crad;
-		R=R1+R2;
-		for(int k=0;k<3;k++)
-		{
-			r2_o+=(cpos[k]-pos1_o[k])*(cpos[k]-pos1_o[k]);
-			r2+=(cpos[k]-pos1[k])*(cpos[k]-pos1[k]);
-			v2+=vel[k]*vel[k];
-			vdr+=(cpos[k]-pos1_o[k])*vel[k];
-		}
-		if(pow(r2,0.5)<R)
-		{
-			rad2=vdr*vdr - v2*(r2_o - R*R);
-			if(rad2>0)
-			{
-				rad=pow(rad2,0.5);
-				tm=(vdr-rad)/v2;
-				tp=(vdr+rad)/v2;
-				if(tm>0 && tm<t_el)
-				{
-					t_el=tm;
-					events[0]=true;
-				}
-				else if(tp<t_el)
-				{
-					t_el=tp;
-					events[0]=true;
-				}
-			}
-		}
-	}
-	else if(main.nearEsc())
-	{
-		v2=0, r2=0, r2_o=0, vdr=0;
-		R=q*q;
-		for(int k=0;k<3;k++)
-		{
-			r2_o+=(pos1_o[k])*(pos1_o[k]);
-			r2+=(pos1[k])*(pos1[k]);
-			v2+=vel[k]*vel[k];
-			vdr+=(pos1_o[k])*vel[k];
-		}
-		if(pow(r2,0.5)<R)
-		{
-			rad2=vdr*vdr - v2*(r2_o - R*R);
-			if(rad2>0)
-			{
-				rad=pow(rad2,0.5);
-				tm=(vdr-rad)/v2;
-				tp=(vdr+rad)/v2;
-				if(tm>0 && tm<t_el)
-				{
-					t_el=tm;
-					events[1]=true;
-				}
-				else if(tp<t_el)
-				{
-					t_el=tp;
-					events[1]=true;
-				}
-			}
-		}
-	}
 	if(condition[1])
 	{
 		vel=main.getv("velocity");
@@ -860,7 +1134,73 @@ bool brownsys::ColCheckAll(int& index1, int& index2, vector<int> moving_particle
 		pos1=main.getv("new coords");
 		nns=main.getNNs(true);
 		R1=main.getp("radius");
-		for(int i=0; i<nns.size();i++)
+		if(main.nearcntr())
+		{
+			v2=0, r2=0, r2_o=0, vdr=0;
+			R2=crad;
+			R=R1+R2;
+			for(int k=0;k<3;k++)
+			{
+				r2_o+=(cpos[k]-pos1_o[k])*(cpos[k]-pos1_o[k]);
+				r2+=(cpos[k]-pos1[k])*(cpos[k]-pos1[k]);
+				v2+=vel[k]*vel[k];
+				vdr+=(cpos[k]-pos1_o[k])*vel[k];
+			}
+			if(pow(r2,0.5)<R)
+			{
+				rad2=vdr*vdr - v2*(r2_o - R*R);
+				if(rad2>0)
+				{
+					rad=pow(rad2,0.5);
+					tm=(vdr-rad)/v2;
+					tp=(vdr+rad)/v2;
+					if(tm>0 && tm<t_el)
+					{
+						t_el=tm;
+						events[0]=true;
+					}
+					else if(tp<t_el)
+					{
+						t_el=tp;
+						events[0]=true;
+					}
+				}
+			}
+		} //reac check
+		else if(main.nearEsc())
+		{
+			v2=0, r2=0, r2_o=0, vdr=0;
+			R=q;
+			for(int k=0;k<3;k++)
+			{
+				r2_o+=(pos1_o[k])*(pos1_o[k]);
+				r2+=(pos1[k])*(pos1[k]);
+				v2+=vel[k]*vel[k];
+				vdr+=(pos1_o[k])*vel[k];
+			}
+			if(pow(r2,0.5)>R)
+			{
+				rad2=vdr*vdr - v2*(r2_o - R*R);
+				if(rad2>0)
+				{
+					rad=pow(rad2,0.5);
+					tm=(vdr-rad)/v2;
+					tp=(vdr+rad)/v2;
+					if(tm>0 && tm<t_el)
+					{
+						t_el=tm;
+						events[1]=true;
+					}
+					else if(tp<t_el)
+					{
+						t_el=tp;
+						events[1]=true;
+					}
+				}
+			}
+		} // esc check
+		
+		for(int i=0; i<nns.size();i++) // main-cr collisions
 		{	
 			v2=0, r2=0, r2_o=0, vdr=0;
 			R2=crowders[nns[i]%Ncr].getp("radius");
@@ -886,48 +1226,95 @@ bool brownsys::ColCheckAll(int& index1, int& index2, vector<int> moving_particle
 					{
 						t_el=tm;
 						col=true;
+						maincol=true;
 						index1=nns[i];
 						events[0]=false;
 						events[1]=false;
-						condition[2]=false;
-						condition[3]=false;
-						condition[4]=false;
+						switcher=0;
 					}
 					else if(tp<t_el)
 					{
 						t_el=tp;
 						col=true;
+						maincol=true;
 						index1=nns[i];
 						events[0]=false;
 						events[1]=false;
-						condition[2]=false;
-						condition[3]=false;
-						condition[4]=false;
+						switcher=0;
 					}
 				}
 			}
 		}
-		if(!col)
+		if(!maincol)
 		{
 			condition[1]=false;
+			main.upmain();
 		}
-	}
-	if(!events[0] && !events[1]) // no reason to check if the sim is done
+	} // end tracking main check
+	if(!events[0] && !events[1]) //only if there is no escape or reaction
 	{
-		for(int i=0; i<moving_particles.size(); i++)
+		if(condition[2]) // tracking crowders
 		{
-			vel=crowders[moving_particles[i]].getv("velocity");
-			pos1_o=crowders[moving_particles[i]].getv("coords");
-			pos1=crowders[moving_particles[i]].getv("new coords");
-			nns=crowders[moving_particles[i]].getNNs(true);
-			R1=crowders[moving_particles[i]].getp("radius");
-			// check for collisions with other crowders
-			for(int j=0; j<nns.size();j++)
-			{	
+			for(int i=0; i<num; i++)
+			{
+				crCol=false;
+				vel=crowders[moving_particles[i]].getv("velocity");
+				pos1_o=crowders[moving_particles[i]].getv("coords");
+				pos1=crowders[moving_particles[i]].getv("new coords");
+				nns=crowders[moving_particles[i]].getNNs(true);
+				R1=crowders[moving_particles[i]].getp("radius");
+				// check for collisions with other crowders
+				for(int j=0; j<nns.size();j++)
+				{	
+					v2=0, r2=0, r2_o=0, vdr=0;
+					R2=crowders[nns[j]%Ncr].getp("radius");
+					R=R1+R2;
+					pos2=crowders[nns[j]%Ncr].PBCswitch(Ncr, nns[j]);
+					for(int k=0;k<3;k++)
+					{
+						r2_o+=(pos2[k]-pos1_o[k])*(pos2[k]-pos1_o[k]);
+						r2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
+						v2+=vel[k]*vel[k];
+						vdr+=(pos2[k]-pos1_o[k])*vel[k];
+					}
+
+					if(r2<R*R)
+					{
+						rad2=vdr*vdr - v2*(r2_o - R*R);
+						if(rad2>0)
+						{
+							rad=pow(rad2,0.5);
+							tm=(vdr-rad)/v2;
+							tp=(vdr+rad)/v2;
+							if(tm>0 && tm<t_el)
+							{
+								t_el=tm;
+								col=true;
+								crCol=true;
+								index1=nns[j];
+								index2=moving_particles[i];
+								switcher=1; //cr-cr collision
+							}
+							else if(tp<t_el)
+							{
+								t_el=tp;
+								col=true;
+								crCol=true;
+								index1=nns[j];
+								index2=moving_particles[i];
+								switcher=1;
+							}
+						}
+					} // ends collision if
+				} // ends nns loop
+
+				//check for collision with main (this may be totally pointless)
+				//also, this would mean i need a complete final vel algorithm
+				//could throw in a bool for near main but whatever
 				v2=0, r2=0, r2_o=0, vdr=0;
-				R2=crowders[nns[j]%Ncr].getp("radius");
+				R2=main.getp("radius");
 				R=R1+R2;
-				pos2=crowders[nns[j]%Ncr].PBCswitch(Ncr, nns[j]);
+				pos2=main.getv("coords");
 				for(int k=0;k<3;k++)
 				{
 					r2_o+=(pos2[k]-pos1_o[k])*(pos2[k]-pos1_o[k]);
@@ -948,69 +1335,94 @@ bool brownsys::ColCheckAll(int& index1, int& index2, vector<int> moving_particle
 						{
 							t_el=tm;
 							col=true;
-							index1=nns[j];
+							crCol=true;
 							index2=moving_particles[i];
-							condition[3]=true;
+							condition[1]=true; // definitely tracking main again... not necessary?
+							switcher=2; //cr-main collision
 						}
 						else if(tp<t_el)
 						{
 							t_el=tp;
 							col=true;
-							index1=nns[j];
+							crCol=true;
 							index2=moving_particles[i];
-							condition[3]=true;
+							condition[1]=true;
+							switcher=2;
 						}
 					}
-				} // ends collision if
-			} // ends nns loop
+				} // ends main collision if
 
-			//check for collision with main (this may be totally pointless)
-			//also, this would mean i need a complete final vel algorithm
-			//could throw in a bool for near main but whatever
-			v2=0, r2=0, r2_o=0, vdr=0;
-			R2=main.getp("radius");
-			R=R1+R2;
-			pos2=main.getv("coords");
-			for(int k=0;k<3;k++)
-			{
-				r2_o+=(pos2[k]-pos1_o[k])*(pos2[k]-pos1_o[k]);
-				r2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
-				v2+=vel[k]*vel[k];
-				vdr+=(pos2[k]-pos1_o[k])*vel[k];
-			}
-
-			if(r2<R*R)
-			{
-				rad2=vdr*vdr - v2*(r2_o - R*R);
-				if(rad2>0)
+				// check for collisions with center
+				if(crowders[moving_particles[i]].nearcntr())
 				{
-					rad=pow(rad2,0.5);
-					tm=(vdr-rad)/v2;
-					tp=(vdr+rad)/v2;
-					if(tm>0 && tm<t_el)
+					v2=0, r2=0, r2_o=0, vdr=0;
+					R2=crad;
+					R=R1+R2;
+					pos2=cpos;
+					for(int k=0;k<3;k++)
 					{
-						t_el=tm;
-						col=true;
-						index2=moving_particles[i];
-						condition[2]=true;
+						r2_o+=(pos2[k]-pos1_o[k])*(pos2[k]-pos1_o[k]);
+						r2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
+						v2+=vel[k]*vel[k];
+						vdr+=(pos2[k]-pos1_o[k])*vel[k];
 					}
-					else if(tp<t_el)
-					{
-						t_el=tp;
-						col=true;
-						index2=moving_particles[i];
-						condition[2]=true;
-					}
-				}
-			} // ends main collision if
 
-			// check for collisions with center
-			if(crowders[moving_particles[i]].nearcntr())
+					if(r2<R*R)
+					{
+						rad2=vdr*vdr - v2*(r2_o - R*R);
+						if(rad2>0)
+						{
+							rad=pow(rad2,0.5);
+							tm=(vdr-rad)/v2;
+							tp=(vdr+rad)/v2;
+							if(tm>0 && tm<t_el)
+							{
+								t_el=tm;
+								col=true;
+								crCol=true;
+								index2=moving_particles[i];
+								condition[3]=true; // tracking center
+								switcher=3; // cr-center collision
+							}
+							else if(tp<t_el)
+							{
+								t_el=tp;
+								col=true;
+								crCol=true;
+								index2=moving_particles[i];
+								condition[3]=true;
+								switcher=3;
+							}
+						}
+					} // ends collision if
+				} // ends center collision if
+				if(!crCol)
+				{
+					crowders[moving_particles[i]].update(); // set coords=newcoords;
+					moving_particles.erase(moving_particles.begin()+i); // remove from list
+					i-=1; // back up i 
+					num-=1; // size has decreased
+				}
+				else
+				{
+					crCol2=true;
+					// if main hits crowder or any crowder hits crowder
+				}
+			}// ends moving_particles loop
+		}// ends tracking crowders loop
+
+		if(condition[3]) // tracking center
+		{
+			vel=cvel;
+			pos1_o=cpos;
+			pos1=ncpos;
+			R1=crad;
+			for(int i=0;i<nearcntr.size();i++)
 			{
 				v2=0, r2=0, r2_o=0, vdr=0;
-				R2=crad;
+				R2=crowders[nearcntr[i]].getp("radius");
 				R=R1+R2;
-				pos2=cpos;
+				pos2=crowders[nearcntr[i]].getv("coords");
 				for(int k=0;k<3;k++)
 				{
 					r2_o+=(pos2[k]-pos1_o[k])*(pos2[k]-pos1_o[k]);
@@ -1031,33 +1443,43 @@ bool brownsys::ColCheckAll(int& index1, int& index2, vector<int> moving_particle
 						{
 							t_el=tm;
 							col=true;
-							index2=moving_particles[i];
-							condition[1]=false;
-							condition[2]=false;
-							condition[3]=false;
-							condition[4]=true;
+							cCol=true;
+							index1=nearcntr[i];
+							condition[3]=true; // tracking center
+							condition[2]=true; // tracking new crowder
+							switcher=4; // cr-center collision
 						}
 						else if(tp<t_el)
 						{
 							t_el=tp;
 							col=true;
-							index2=moving_particles[i];
-							condition[1]=false;
-							condition[2]=false;
-							condition[3]=false;
-							condition[4]=true;
+							cCol=true;
+							index1=nearcntr[i];
+							condition[3]=true;
+							condition[2]=true;
+							switcher=4;
 						}
 					}
 				} // ends collision if
-			}
-
-		}// ends moving_particles loop
-
-		if(condition[5])
+			} // ends center nns loop
+		} // ends tracking center
+		if(!cCol)
 		{
-			// need nearest neighbor list for center
+			cpos=ncpos;
+			// update every particles position and check for escape
+			condition[3]=false; // stop tracking center
 		}
+	} // ends if no events
+
+	if(!col) // no collisions at all
+	{
+		condition[0]=true; // resolved!
 	}
+
+	/*condition[0]=resolved;
+	condition[1]=cond1;
+	condition[2]=cond2;
+	condition[3]=cond3;*/
 	return col;
 }
 
@@ -1073,6 +1495,7 @@ bool brownsys::mainColCheck(int& index, double& t_el)
 
 	if(main.nearcntr())
 	{
+		
 		v2=0, r2=0, r2_o=0, vdr=0;
 		R2=crad;
 		R=R1+R2;
@@ -1106,6 +1529,7 @@ bool brownsys::mainColCheck(int& index, double& t_el)
 	}
 	else if(main.nearEsc())
 	{
+
 		v2=0, r2=0, r2_o=0, vdr=0;
 		R=q*q;
 		for(int k=0;k<3;k++)
@@ -1178,6 +1602,10 @@ bool brownsys::mainColCheck(int& index, double& t_el)
 			}
 		}
 	}
+	if(!col)
+	{
+		main.upmain();
+	}
 	return col;
 }
 
@@ -1194,7 +1622,7 @@ void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqste
 
 
 	for(int i=0;i<eqsteps;i++) // should be while !equilibrated
-	{cout<<"equilibration step # "<<i<<endl;
+	{
 	for(int k=0;k<Ncr;k++){counter++;
 		
 		nns=crowders[k].getNNs(true);
