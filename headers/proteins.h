@@ -15,10 +15,12 @@ protected:
 	vector<double> vel;
 	vector<int> NNs;
 	vector<int> notNNs;
+	vector<bool> Boundaries; //8 true/false elements
 	double mass;
 	double radius;
 	bool nearcenter;
 	double cdist; // distance from center	
+
 public:	
 	//CONSTRUCTOR
 	protein(); //default constructor. only contains mass and radius
@@ -47,10 +49,14 @@ public:
 	//Access 
 	vector<double> getv(string a); // coords, new coords, vel
 	double getp(string a); // mass, radius
+	bool NearBound(int i); // returns if near the boundary
+	//vector<int> NNindex(protein& other);
+	bool IsNN(protein& other, int index, bool remover, int rindex);
 	
 	 
 	vector<int> getNNs(bool nn); //true=NNs, false=notNNs
-	void setNNs(vector<int> nns, vector<int> nnns); // sets NNs and notNNs
+	void setNNs(vector<int> nnns); // sets NNs and notNNs
+	void setNNs(vector<int> nns, vector<int> nnns);
 	
 	
 	

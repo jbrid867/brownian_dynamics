@@ -27,6 +27,7 @@ mainP::mainP()
 protein::protein(double x,double y, double z, double ms, double rad)
 {	
 	double mag2=0, mag;
+	for(int i=0;i<6;i++){Boundaries.push_back(false);}
 	//crowder=crow;
 	for(int i=0;i<dim;i++)
 		{
@@ -40,9 +41,12 @@ protein::protein(double x,double y, double z, double ms, double rad)
 	coordinates[2]=z; newcoords[2]=z; colCoords[2]=z;
 	mass=ms;
 	radius=rad;
+
 	for(int i=0;i<3;i++)
 	{
-		mag2+=x*x+y*y+z*z;
+		mag2+=coordinates[i]*coordinates[i];
+		if(abs(coordinates[i]-L)<3*pow(10,-10)){Boundaries[i]=true;}
+		else if(abs(coordinates[i]+L)<3*pow(10,-10)){Boundaries[i+1]=true;}
 	}
 	cdist=pow(mag2,0.5);
 	if(cdist<4*radius)
@@ -72,7 +76,294 @@ mainP::mainP(double x,double y, double z, double ms, double rad, double centerra
 ///////////////////////////////////////////////////////////////////////////////////
 // Protein member functions
 ///////////////////////////////////////////////////////////////////////////////////
+bool protein::IsNN(protein& other, int index, bool remover, int rindex)
+{
+	bool isNN=false;
+	vector<double> pos2=other.getv("coords");
+	double mag2=0, mag;
+	double xx,yy,zz;
+	for(int i=0;i<3;i++)
+	{
+		mag2+=(coordinates[i]-pos2[i])*(coordinates[i]-pos2[i]);
+	}
+	if(mag2<cut){if(!remover){NNs.push_back(index);} isNN=true;}
+	if(Boundaries[0]&&other.NearBound(1)) // near  +x
+	{
+		xx=pos2[0]+2*L;
+		mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-pos2[1])*(coordinates[1]-pos2[1])+(coordinates[2]-pos2[2])*(coordinates[2]-pos2[2]);
+		mag=pow(mag2,0.5);
+		if(mag<cut)
+		{
+			if(!remover){NNs.push_back(index+N);} 
+			isNN=true;
+		}
+		if(Boundaries[2]&&other.NearBound(3)) // near +x and +y
+		{
+			yy=pos2[1]+2*L;
+			mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-pos2[2])*(coordinates[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+2*N);} isNN=true;
+			}		
+			if(Boundaries[4]&&other.NearBound(5)) // near +x, +y, +z
+			{
+				zz=pos2[2]+2*L;
+				mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+				mag=pow(mag2,0.5);
+				if(mag<cut)
+				{
+					if(!remover){NNs.push_back(index+3*N);} isNN=true;
+				}
+			}
+			else if(Boundaries[5]&&other.NearBound(4)) // +x, +y, -z
+			{
+				zz=pos2[2]-2*L;
+				mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+				mag=pow(mag2,0.5);
+				if(mag<cut)
+				{
+					if(!remover){NNs.push_back(index+4*N);} isNN=true;
+				}
+			}
+		}
+		else if(Boundaries[3]&&other.NearBound(2)) // +x, -y
+		{
+			yy=pos2[1]+2*L;
+			mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-pos2[2])*(coordinates[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+5*N);} isNN=true;
+			}		
+			if(Boundaries[4]&&other.NearBound(5)) // near +x, -y, +z
+			{
+				zz=pos2[2]+2*L;
+				mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+				mag=pow(mag2,0.5);
+				if(mag<cut)
+				{
+					if(!remover){NNs.push_back(index+6*N);} isNN=true;
+				}
+			}
+			else if(Boundaries[5]&&other.NearBound(4)) // +x, -y, -z
+			{
+				zz=pos2[2]-2*L;
+				mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+				mag=pow(mag2,0.5);
+				if(mag<cut)
+				{
+					if(!remover){NNs.push_back(index+7*N);} isNN=true;
+				}
+			}
+		}
+		else if(Boundaries[4]&&other.NearBound(5)) //+x +z
+		{
+			zz=pos2[2]+2*L;
+			mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-pos2[1])*(coordinates[1]-pos2[1])+(coordinates[2]-zz)*(coordinates[2]-zz);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+8*N);} isNN=true;
+			}
+		}
+		else if(Boundaries[5]&&other.NearBound(4)) //+x, -z
+		{
+			zz=pos2[2]-2*L;
+			mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-pos2[1])*(coordinates[1]-pos2[1])+(coordinates[2]-zz)*(coordinates[2]-zz);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+9*N);} isNN=true;
+			}
+		}
+	} // end + x boundary, never need +x again
+	else if(Boundaries[0]&&other.NearBound(1)) // near  -x
+	{
+		xx=pos2[0]-2*L;
+		mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-pos2[1])*(coordinates[1]-pos2[1])+(coordinates[2]-pos2[2])*(coordinates[2]-pos2[2]);
+		mag=pow(mag2,0.5);
+		if(mag<cut)
+		{
+			if(!remover){NNs.push_back(index+10*N);} isNN=true;
+		}
+		if(Boundaries[2]&&other.NearBound(3)) // near -x and +y
+		{
+			yy=pos2[1]+2*L;
+			mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-pos2[2])*(coordinates[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+11*N);} isNN=true;
+			}		
+			if(Boundaries[4]&&other.NearBound(5)) // near -x, +y, +z
+			{
+				zz=pos2[2]+2*L;
+				mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+				mag=pow(mag2,0.5);
+				if(mag<cut)
+				{
+					if(!remover){NNs.push_back(index+12*N);} isNN=true;
+				}
+			}
+			else if(Boundaries[5]&&other.NearBound(4)) // -x, +y, -z
+			{
+				zz=pos2[2]-2*L;
+				mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+				mag=pow(mag2,0.5);
+				if(mag<cut)
+				{
+					if(!remover){NNs.push_back(index+13*N);} isNN=true;
+				}
+			}
+		}
+		else if(Boundaries[3]&&other.NearBound(2)) // -x, -y
+		{
+			yy=pos2[1]+2*L;
+			mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-pos2[2])*(coordinates[2]-pos2[2]);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+14*N);} isNN=true;
+			}		
+			if(Boundaries[4]&&other.NearBound(5)) // near -x, -y, +z
+			{
+				zz=pos2[2]+2*L;
+				mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+				mag=pow(mag2,0.5);
+				if(mag<cut)
+				{
+					if(!remover){NNs.push_back(index+15*N);} isNN=true;
+				}
+			}
+			else if(Boundaries[5]&&other.NearBound(4)) // -x, -y, -z
+			{
+				zz=pos2[2]-2*L;
+				mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+				mag=pow(mag2,0.5);
+				if(mag<cut)
+				{
+					if(!remover){NNs.push_back(index+16*N);} isNN=true;
+				}
+			}
+		}
+		else if(Boundaries[4]&&other.NearBound(5)) //-x +z
+		{
+			zz=pos2[2]+2*L;
+			mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-pos2[1])*(coordinates[1]-pos2[1])+(coordinates[2]-zz)*(coordinates[2]-zz);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+17*N);} isNN=true;
+			}
+		}
+		else if(Boundaries[5]&&other.NearBound(4)) //-x, -z
+		{
+			zz=pos2[2]-2*L;
+			mag2=mag2=(coordinates[0]-xx)*(coordinates[0]-xx)+(coordinates[1]-pos2[1])*(coordinates[1]-pos2[1])+(coordinates[2]-zz)*(coordinates[2]-zz);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+18*N);} isNN=true;
+			}
+		}
+	} // end - x boundary, never need -x again
+	if(Boundaries[2]&&other.NearBound(3)) // +y
+	{
+		yy=pos2[1]+2*L;
+		mag2=(coordinates[0]-pos2[0])*(coordinates[0]-pos2[0])+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-pos2[2])*(coordinates[2]-pos2[2]);
+		mag=pow(mag2,0.5);
+		if(mag<cut)
+		{
+			if(!remover){NNs.push_back(index+19*N);} isNN=true;
+		}
+		if(Boundaries[4]&&other.NearBound(5)) // +y, +z
+		{
+			zz=pos2[2]+2*L;
+			mag2=(coordinates[0]-pos2[0])*(coordinates[0]-pos2[0])+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+20*N);} isNN=true;
+			}
+		}
+		else if(Boundaries[5]&&other.NearBound(4)) // +y, -z
+		{
+			zz=pos2[2]-2*L;
+			mag2=(coordinates[0]-pos2[0])*(coordinates[0]-pos2[0])+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+21*N);} isNN=true;
+			}
+		}
+	} // end +y
+	else if(Boundaries[3]&&other.NearBound(2)) // -y
+	{
+		yy=pos2[1]-2*L;
+		mag2=(coordinates[0]-pos2[0])*(coordinates[0]-pos2[0])+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-pos2[2])*(coordinates[2]-pos2[2]);
+		mag=pow(mag2,0.5);
+		if(mag<cut)
+		{
+			if(!remover){NNs.push_back(index+22*N);} isNN=true;
+		}
+		if(Boundaries[4]&&other.NearBound(5)) // -y, +z
+		{
+			zz=pos2[2]+2*L;
+			mag2=(coordinates[0]-pos2[0])*(coordinates[0]-pos2[0])+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+23*N);} isNN=true;
+			}
+		}
+		else if(Boundaries[5]&&other.NearBound(4)) // -y, -z
+		{
+			zz=pos2[2]-2*L;
+			mag2=(coordinates[0]-pos2[0])*(coordinates[0]-pos2[0])+(coordinates[1]-yy)*(coordinates[1]-yy)+(coordinates[2]-zz)*(coordinates[2]-zz);
+			mag=pow(mag2,0.5);
+			if(mag<cut)
+			{
+				if(!remover){NNs.push_back(index+24*N);} isNN=true;
+			}
+		}
+	}
+	if(Boundaries[4]&&other.NearBound(5)) //+z
+	{
+		zz=pos2[2]+2*L;
+		mag2=(coordinates[0]-pos2[0])*(coordinates[0]-pos2[0])+(coordinates[1]-pos2[1])*(coordinates[1]-pos2[1])+(coordinates[2]-zz)*(coordinates[2]-zz);
+		mag=pow(mag2,0.5);
+		if(mag<cut)
+		{
+			if(!remover){NNs.push_back(index+25*N);} isNN=true;
+		}
+	}
+	else if(Boundaries[5]&&other.NearBound(4)) //-z
+	{
+		zz=pos2[2]-2*L;
+		mag2=(coordinates[0]-pos2[0])*(coordinates[0]-pos2[0])+(coordinates[1]-pos2[1])*(coordinates[1]-pos2[1])+(coordinates[2]-zz)*(coordinates[2]-zz);
+		mag=pow(mag2,0.5);
+		if(mag<cut)
+		{
+			if(!remover){NNs.push_back(index+26*N);} isNN=true;
+		}
+	}
+	if(!isNN && remover)
+	{
+		NNs.erase(NNs.begin()+rindex);
+	}
+	return isNN;
+}
 
+bool protein::NearBound(int i)
+{
+	return Boundaries[i];
+}
+
+void protein::setNNs(vector<int> nnns)
+{
+	notNNs=nnns;
+}
 void protein::setNNs(vector<int> nns, vector<int> nnns)
 {
 	NNs=nns;
@@ -126,7 +417,12 @@ void protein::move(mt19937& gen, normal_distribution<> distro)
 
 void protein::setpos(vector<double> pos)
 {
-	for(int i=0;i<3;i++){coordinates[i]=pos[i];}
+	for(int i=0;i<3;i++)
+	{
+		if(pos[i]<-1.0*L){pos[i]+=2*L;}
+		else if(pos[i]>L){pos[i]-=2*L;}
+		coordinates[i]=pos[i];
+	}
 }
 
 
@@ -140,12 +436,110 @@ void protein::newvel(vector<double> v)
 vector<double> protein::PBCswitch(int crowds, int index)
 {
 
-	if(index>=crowds && index<2*crowds){colCoords[0]=coordinates[0]-2*L;}
-	else if(index>=2*crowds && index<3*crowds){colCoords[0]=coordinates[0]+2*L;}
-	else if(index>=3*crowds && index<4*crowds){colCoords[1]=coordinates[1]-2*L;}
-	else if(index>=4*crowds && index<5*crowds){colCoords[1]=coordinates[1]+2*L;}
-	else if(index>=5*crowds && index<6*crowds){colCoords[2]=coordinates[2]-2*L;}
-	else if(index>=6*crowds){colCoords[2]=coordinates[2]+2*L;}
+	if(index>=crowds && index<2*crowds) // through +x
+	{
+	colCoords[0]=coordinates[0]+2*L;
+} 
+	else if(index>=2*crowds && index<3*crowds) // +x +y
+	{
+		colCoords[0]=coordinates[0]+2*L;colCoords[1]=coordinates[1]+2*L;
+	} 
+	else if(index>=3*crowds && index<4*crowds) // +x, +y +z
+	{
+		colCoords[0]=coordinates[0]+2*L;colCoords[1]=coordinates[1]+2*L;colCoords[2]=coordinates[2]+2*L;
+	}
+	else if(index>=4*crowds && index<5*crowds) //x, y, -z
+	{
+		colCoords[0]=coordinates[0]+2*L;colCoords[1]=coordinates[1]+2*L;colCoords[2]=coordinates[2]-2*L;
+	}
+	else if(index>=5*crowds && index<6*crowds) //x -y
+	{
+		colCoords[0]=coordinates[0]+2*L;colCoords[1]=coordinates[1]-2*L;
+	}
+	else if(index>=6*crowds && index<7*crowds) // x -y z
+	{
+		colCoords[0]=coordinates[0]+2*L;colCoords[1]=coordinates[1]-2*L;colCoords[2]=coordinates[2]+2*L;
+	}
+	else if(index>=7*crowds && index<8*crowds) // x -y -z
+	{
+		colCoords[0]=coordinates[0]+2*L;colCoords[1]=coordinates[1]-2*L;colCoords[2]=coordinates[2]-2*L;
+	}
+	else if(index>=8*crowds && index<9*crowds) // x z
+	{
+		colCoords[0]=coordinates[0]+2*L; colCoords[2]=coordinates[2]+2*L;
+	}
+	else if(index>=9*crowds && index<10*crowds) // x -z
+	{
+		colCoords[0]=coordinates[0]+2*L; colCoords[2]=coordinates[2]-2*L;
+	}
+	else if(index>=10*crowds && index<11*crowds) // -x
+	{
+		colCoords[0]=coordinates[0]-2*L;
+	}
+	else if(index>=11*crowds && index<12*crowds) // -x +y
+	{
+		colCoords[0]=coordinates[0]-2*L; colCoords[1]=coordinates[1]+2*L;
+	}
+	else if(index>=12*crowds && index<13*crowds) // -x +y +z
+	{
+		colCoords[0]=coordinates[0]-2*L; colCoords[1]=coordinates[1]+2*L;colCoords[2]=coordinates[2]+2*L;
+	}
+	else if(index>=13*crowds && index<14*crowds) // -x +y -z
+	{
+		colCoords[0]=coordinates[0]-2*L; colCoords[1]=coordinates[1]+2*L;colCoords[2]=coordinates[2]-2*L;
+	}
+	else if(index>=14*crowds && index<15*crowds) //-x -y
+	{
+		colCoords[0]=coordinates[0]-2*L; colCoords[1]=coordinates[1]-2*L;
+	}
+	else if(index>=15*crowds && index<16*crowds) //-x-y+z
+	{
+		colCoords[0]=coordinates[0]-2*L; colCoords[1]=coordinates[1]-2*L;colCoords[2]=coordinates[2]+2*L;
+	}
+	else if(index>=16*crowds && index<17*crowds) //-x-y-z
+	{
+		colCoords[0]=coordinates[0]-2*L; colCoords[1]=coordinates[1]-2*L;colCoords[2]=coordinates[2]-2*L;
+	}
+	else if(index>=17*crowds && index<18*crowds) //-x+z
+	{
+		colCoords[0]=coordinates[0]-2*L;colCoords[2]=coordinates[2]+2*L;
+	}
+	else if(index>=18*crowds && index<19*crowds) //-x-z
+	{
+		colCoords[0]=coordinates[0]-2*L;colCoords[2]=coordinates[2]-2*L;
+	}
+	else if(index>=19*crowds && index<20*crowds) //+y
+	{
+		colCoords[1]=coordinates[1]+2*L;
+	}
+	else if(index>=20*crowds && index<21*crowds) //+y+z
+	{
+		colCoords[1]=coordinates[1]+2*L;colCoords[2]=coordinates[2]+2*L;
+	}
+	else if(index>=21*crowds && index<22*crowds) //+y-z
+	{
+		colCoords[1]=coordinates[1]+2*L;colCoords[2]=coordinates[2]-2*L;
+	}
+	else if(index>=22*crowds && index<23*crowds) //-y
+	{
+		colCoords[1]=coordinates[1]-2*L;
+	}
+	else if(index>=23*crowds && index<24*crowds) //-y+z
+	{
+		colCoords[1]=coordinates[1]-2*L;colCoords[2]=coordinates[2]+2*L;
+	}
+	else if(index>=24*crowds && index<25*crowds) //-y-z
+	{
+		colCoords[1]=coordinates[1]-2*L;colCoords[2]=coordinates[2]-2*L;
+	}
+	else if(index>=25*crowds && index<26*crowds) //+z
+	{
+		colCoords[2]=coordinates[2]+2*L;
+	}
+	else if(index>=26*crowds) //-z
+	{
+		colCoords[2]=coordinates[2]-2*L;
+	}
 		
 	return colCoords;
 }
@@ -156,6 +550,16 @@ void protein::update()
 	for(int i=0; i<3; i++)
 	{
 		coordinates[i]=newcoords[i];
+		if(coordinates[i]>L)
+		{
+			coordinates[i]-=2*L;
+		}
+		else if(coordinates[i]<-1.0*L)
+		{
+			coordinates[i]+=2*L;
+		}
+		// find way to change NN indices
+		colCoords[i]=coordinates[i];
 		mag2+=coordinates[i]*coordinates[i];
 	}
 	if(pow(mag2,0.5)<4*radius)
@@ -173,6 +577,7 @@ vector<double> protein::mvVel(double t)
 	for(int i=0;i<3;i++)
 	{
 		newcoords[i]=coordinates[i]+vel[i]*t;
+		colCoords[i]=newcoords[i];
 	}
 	return newcoords;
 }
@@ -181,6 +586,7 @@ void protein::nudge(double t)
 	for(int i=0;i<3;i++)
 	{
 		coordinates[i]+=vel[i]*t;
+		colCoords[i]=coordinates[i];
 	}
 }
 

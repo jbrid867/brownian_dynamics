@@ -139,7 +139,7 @@ brownsys::~brownsys()
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // need getr function for protein class
-void brownsys::startNNs(double cut)
+void brownsys::startNNs()
 {
 	
 	vector<int> nns;
@@ -167,44 +167,10 @@ void brownsys::startNNs(double cut)
 		
 		// CAN IMPROVE THIS BY NESTING ELSE [DONE, ELSES NESTED]		
 
-		if(mag<cut){nns.push_back(u);NN=true;}
-		else{
-			x-=2*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+Ncr);NN=true;}
-			else{
-			x+=4*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+2*Ncr);NN=true;}
-			else{
-			x-=2*L;
-			y-=2*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+3*Ncr);NN=true;}
-			else{
-			y+=4*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+4*Ncr);NN=true;}
-			else{
-			y-=2*L;
-			z-=2*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+5*Ncr);NN=true;}
-			else{
-			z+=4*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(u+6*Ncr);NN=true;}
-			if(!NN){nnns.push_back(u);}
-			}}}}}}//ends all 6 elses
+		if(mag<cut){nns.push_back(u);NN=true;} // main will never start near a boundary
 	}
 	
-	sort(nearcntr.begin(),nearcntr.end());
+	//sort(nearcntr.begin(),nearcntr.end()); // this is already sorted
 	main.setNNs(nns, nnns);
 	
 	
@@ -215,60 +181,23 @@ void brownsys::startNNs(double cut)
 		dumby=crowders[u].getv("coords");
 		xx=dumby[0];yy=dumby[1];zz=dumby[2];
 		for(int v=0; v<Ncr; v++){NN=false;
-		if(u!=v)
-		{
-			dumby=crowders[v].getv("coords");
-			x=dumby[0];y=dumby[1];z=dumby[2];
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-
-			if(mag<cut){nns.push_back(v);NN=true;}
-			else{
-			x-=2*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(v+Ncr);NN=true;}
-			else{
-			x+=4*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(v+2*Ncr);NN=true;}
-			else{
-			x-=2*L;
-			y-=2*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(v+3*Ncr);NN=true;}
-			else{
-			y+=4*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(v+4*Ncr);NN=true;}
-			else{
-			y-=2*L;
-			z-=2*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(v+5*Ncr);NN=true;}
-			else{
-			z+=4*L;
-			mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
-			mag=pow(mag2,0.5);
-			if(mag<cut){nns.push_back(v+6*Ncr);NN=true;}
-			}}}}}} //end all 6 elses
-			if(!NN){nnns.push_back(u);}
-			
-		}// end if u!=v			
+			if(u!=v)
+			{
+				if(!crowders[u].IsNN(crowders[v],v,false,0))
+				{
+					nnns.push_back(v);
+				}
+			}// end if u!=v			
 		}// end for v
 	
-	crowders[u].setNNs(nns,nnns);
+	crowders[u].setNNs(nnns);
 	
 	}// end for u
-	
+	cout<<"NN list created"<<endl;
 }// ends function
 
 
-void brownsys::updateNNs(double cut)
+void brownsys::updateNNs()
 {
 	vector<double> pos1, pos2;
 	double dx,dy,dz,mag2,mag,xx,yy,zz;
@@ -329,113 +258,25 @@ void brownsys::updateNNs(double cut)
 	
 	for(int i=0; i<NNnum; i++) // Main removal loop
 	{
-		
-		index=NNs[i];
-		
-		if(index<Ncr)
+		if(!main.IsNN(crowders[NNs[i]%Ncr], NNs[i]%Ncr, true, i))
 		{
-			pos2=crowders[index].getv("coords");
-			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
+			nNNs.push_back(NNs[i]%Ncr);
+			NNs.erase(NNs.begin()+i);
+			NNnum-=1; i-=1;
 		}
-		else if(index>=Ncr && index<2*Ncr) //-x border
-		{
-			index2=index-Ncr;
-			pos2=crowders[index2].getv("coords");
-			pos2[0]-=2*L;
-			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-		}
-		else if(index>=2*Ncr && index<3*Ncr) //+x border
-		{
-			index2=index-2*Ncr;
-			pos2=crowders[index2].getv("coords");
-			pos2[0]+=2*L;
-			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-		}
-		else if(index>=3*Ncr && index<4*Ncr) //-y border
-		{
-			index2=index-3*Ncr;
-			pos2=crowders[index2].getv("coords");
-			pos2[1]-=2*L;
-			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-		}
-		else if(index>=4*Ncr && index<5*Ncr) //+y border
-		{
-			index2=index-4*Ncr;
-			pos2=crowders[index2].getv("coords");
-			pos2[1]+=2*L;
-			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-		}
-		else if(index>=5*Ncr && index<6*Ncr) //-z border
-		{
-			index2=index-5*Ncr;
-			pos2=crowders[index2].getv("coords");
-			pos2[2]-=2*L;
-			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-		}
-		else if(index>=6*Ncr && index<7*Ncr) //+z border
-		{
-			index2=index-6*Ncr;
-			pos2=crowders[index2].getv("coords");
-			pos2[2]+=2*L;
-			mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-			mag=pow(mag2,0.5);
-			if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-		}
-	
-	
 	} // ends the NN removal for loop		
 
 	for(int i=0; i<nNNnum; i++) //CAN MAKE THIS BETTER BY LINKING PARTICLES FOR WHICH IVE ALREADY FOUND NNS
 	{
-		index=nNNs[i];
-		pos2=crowders[index].getv("coords");
-		dx=pos1[0]-pos2[0];
-		dy=pos1[1]-pos2[1];
-		dz=pos1[2]-pos2[2];
-		if(dx<cut)
-		{if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-		}}//all ifs ended
-		else if(dx<cut-2*L) // -x boundary
-		{dx+=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-		}}//-x ifs ended
-		else if(dx>2*L-cut) // +x boundary
-		{dx-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+2*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-		}}//+x ifs ended
-		else if(dy<cut-2*L) // -y boundary
-		{dy+=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+3*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-		}}//-y ifs ended
-		else if(dy>2*L-cut) // +y boundary
-		{dy-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+4*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-		}}//+y ifs ended
-		else if(dz<cut-2*L) // -z boundary
-		{dz+=2*L; if(pow(dz*dz+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+5*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-		}}//-z ifs ended
-		else if(dz>2*L-cut) // +z boundary
-		{dz-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-		{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+6*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-		}}//+z ifs ended
+		if(main.IsNN(crowders[nNNs[i]],nNNs[i],false,0))
+		{
+			nNNs.erase(nNNs.begin()+i);
+			i-=1; nNNnum-=1;
+		}
 
 	} // ends NN addition loop for MAIN
 
-	main.setNNs(NNs, nNNs);
+	main.setNNs(nNNs);
 
 	//////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////// NN update for every crowder
@@ -451,74 +292,14 @@ void brownsys::updateNNs(double cut)
 	NNnum=NNs.size();
 	nNNnum=nNNs.size();
 
-		for(int i=0; i<NNnum; i++) // Main removal loop
-		{
-			
-			index=NNs[i];
-			
-			if(index<Ncr)
+		for(int i=0; i<NNnum; i++) // crowder NN removal loop
+		{	
+			if(!crowders[j].IsNN(crowders[NNs[i]%Ncr],NNs[i]%Ncr,true,i))
 			{
-				pos2=crowders[index].getv("coords");
-				mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-				mag=pow(mag2,0.5);
-				if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
+				nNNs.push_back(NNs[i]%Ncr);
+				NNs.erase(NNs.begin()+i);
+				NNnum-=1;i-=1;
 			}
-			else if(index>=Ncr && index<2*Ncr) //-x border
-			{
-				index2=index-Ncr;
-				pos2=crowders[index2].getv("coords");
-				pos2[0]-=2*L;
-				mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-				mag=pow(mag2,0.5);
-				if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-			}
-			else if(index>=2*Ncr && index<3*Ncr) //+x border
-			{
-				index2=index-2*Ncr;
-				pos2=crowders[index2].getv("coords");
-				pos2[0]+=2*L;
-				mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-				mag=pow(mag2,0.5);
-				if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-			}
-			else if(index>=3*Ncr && index<4*Ncr) //-y border
-			{
-				index2=index-3*Ncr;
-				pos2=crowders[index2].getv("coords");
-				pos2[1]-=2*L;
-				mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-				mag=pow(mag2,0.5);
-				if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-			}
-			else if(index>=4*Ncr && index<5*Ncr) //+y border
-			{
-				index2=index-4*Ncr;
-				pos2=crowders[index2].getv("coords");
-				pos2[1]+=2*L;
-				mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-				mag=pow(mag2,0.5);
-				if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-			}
-			else if(index>=5*Ncr && index<6*Ncr) //-z border
-			{
-				index2=index-5*Ncr;
-				pos2=crowders[index2].getv("coords");
-				pos2[2]-=2*L;
-				mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-				mag=pow(mag2,0.5);
-				if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-			}
-			else if(index>=6*Ncr && index<7*Ncr) //+z border
-			{
-				index2=index-6*Ncr;
-				pos2=crowders[index2].getv("coords");
-				pos2[2]+=2*L;
-				mag2=(pos1[0]-pos2[0])*(pos1[0]-pos2[0])+(pos1[1]-pos2[1])*(pos1[1]-pos2[1])+(pos1[2]-pos2[2])*(pos1[2]-pos2[2]);
-				mag=pow(mag2,0.5);
-				if(mag>cut){NNs.erase(NNs.begin()+i);nNNs.push_back(index);NNnum-=1;i-=1;}
-			}
-			
-			
 		} // ends the i removal loops	
 
 
@@ -526,42 +307,13 @@ void brownsys::updateNNs(double cut)
 
 	for(int i=0; i<nNNnum; i++) //CAN MAKE THIS BETTER BY LINKING PARTICLES FOR WHICH IVE ALREADY FOUND NNS
 		{
-			index=nNNs[i];
-			pos2=crowders[index].getv("coords");
-			dx=pos1[0]-pos2[0];
-			dy=pos1[1]-pos2[1];
-			dz=pos1[2]-pos2[2];
-			if(dx<cut)
-			{if(pow(dx*dx+dy*dy,0.5)<cut)
-			{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-			}}//all ifs ended
-			else if(dx<cut-2*L) // -x boundary
-			{dx+=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-			{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-			}}//-x ifs ended
-			else if(dx>2*L-cut) // +x boundary
-			{dx-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-			{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+2*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-			}}//+x ifs ended
-			else if(dy<cut-2*L) // -y boundary
-			{dy+=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-			{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+3*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-			}}//-y ifs ended
-			else if(dy>2*L-cut) // +y boundary
-			{dy-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-			{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+4*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-			}}//+y ifs ended
-			else if(dz<cut-2*L) // -z boundary
-			{dz+=2*L; if(pow(dz*dz+dy*dy,0.5)<cut)
-			{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+5*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-			}}//-z ifs ended
-			else if(dz>2*L-cut) // +z boundary
-			{dz-=2*L; if(pow(dx*dx+dy*dy,0.5)<cut)
-			{if(pow(dx*dx+dy*dy+dz*dz,0.5)<cut){NNs.push_back(index+6*Ncr);nNNs.erase(nNNs.begin()+i);nNNnum-=1;i-=1;}
-			}}//+z ifs ended
-
+			if(crowders[j].IsNN(crowders[nNNs[i]],nNNs[i],false,0))
+			{
+				nNNs.erase(nNNs.begin()+i);
+				nNNnum-=1;i-=1;
+			}
 		} // ends i addition loop
-
+		crowders[j].setNNs(nNNs);
 	} // ends j loop for crowder nearest neighbor update	
 } // ends NNupdate
 
@@ -583,13 +335,14 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int& betacoun
 	{
 		if((counter)%10==0)
 		{
-			updateNNs(3*pow(10,-10));
+			updateNNs();
+			cout<<"ten steps"<<endl;
 		}
 		// Move main and check escape/reaction/collisions
 		main.move(gen, distro);
 		if(mainColCheck(colIndex, t_el))
 		{
-			//cout<<"collision"<<endl;
+			cout<<"collision"<<endl;
 			mainRes(t_el, colIndex, 0, empty);	
 		}
 		if(!events[0] && !events[1])

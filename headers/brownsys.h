@@ -32,8 +32,8 @@ public:
 	~brownsys();
 	
 	// NNs
-	void startNNs(double cut); // builds NN lists
-	void updateNNs(double cut); // updates NN lists, consider using references/pointers
+	void startNNs(); // builds NN lists
+	void updateNNs(); // updates NN lists, consider using references/pointers
 
 	// Dynamics
 	void moveall(mt19937& gen, normal_distribution<> distro, int& betacount); //String for equilibration or actual step
@@ -55,6 +55,12 @@ public:
 	void shftcntr(); // shifts reference frame to center, updates PBCs	
 	// debugging
 	void printcoords(protein test);	 
+};
+
+class Reaction_sys : public brownsys
+{
+private:
+	mainP main;
 };
 #endif
 
