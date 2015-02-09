@@ -14,9 +14,9 @@ int main(){
 	normal_distribution<> distro(0,pow(2*D*h,0.5));
 
 	#pragma omp parallel for schedule(dynamic) 
-	for(i=0; i<100; i++)
+	for(i=0; i<1; i++)
 	{
-		brownsys baller(N);
+		reaction_sys baller;
 		baller.startNNs();
 		baller.equilibrate(gen,distro,1000);
 		baller.moveall(gen, distro, count);

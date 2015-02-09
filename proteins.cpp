@@ -8,11 +8,12 @@ using namespace std;
 //constructors
 
 //Default: constructs only non-crowder parameter proteins
-protein::protein()
+protein::protein(int Rad, double Mass)
 {
-	for(int i=0;i<dim;i++){coordinates.push_back(0);}
-	mass=M;
-	radius=r;
+	for(int i=0;i<dim;i++){coordinates.push_back(0); newcoords.push_back(0);vel.push_back(0); colCoords.push_back(0);}
+	for(int j=0;j<8;j++){Boundaries.push_back(false);}
+	mass=Mass;
+	radius=Rad;
 	nearcenter=false;
 	//crowder=0;
 }
@@ -22,47 +23,21 @@ mainP::mainP()
 {
 	escape=false;
 }
+mainP::~mainP(){}
 
 //specific constructors. 
-protein::protein(double x,double y, double z, double ms, double rad)
+protein::protein()
 {	
-	double mag2=0, mag;
-	for(int i=0;i<6;i++){Boundaries.push_back(false);}
-	//crowder=crow;
-	for(int i=0;i<dim;i++)
-		{
-			coordinates.push_back(0);
-		 	newcoords.push_back(0);
-		 	vel.push_back(0);
-		 	colCoords.push_back(0);
-		 }
-	coordinates[0]=x; newcoords[0]=x; colCoords[0]=x;
-	coordinates[1]=y; newcoords[1]=y; colCoords[1]=y;
-	coordinates[2]=z; newcoords[2]=z; colCoords[2]=z;
-	mass=ms;
-	radius=rad;
-
-	for(int i=0;i<3;i++)
-	{
-		mag2+=coordinates[i]*coordinates[i];
-		if(abs(coordinates[i]-L)<3*pow(10,-10)){Boundaries[i]=true;}
-		else if(abs(coordinates[i]+L)<3*pow(10,-10)){Boundaries[i+1]=true;}
-	}
-	cdist=pow(mag2,0.5);
-	if(cdist<4*radius)
-	{
-		nearcenter=true;
-	}
-	else
-	{
-		nearcenter=false;
-	}
+	for(int i=0;i<dim;i++){coordinates.push_back(0); newcoords.push_back(0);vel.push_back(0); colCoords.push_back(0);}
 }
 
 mainP::mainP(double x,double y, double z, double ms, double rad, double centerrad)
-	: protein(x,y,z,ms,rad)
+	: protein(rad, ms)
 { 
 	crad=centerrad;
+	coordinates[0]=x;newcoords[0]=x;colCoords[0]=x;
+	coordinates[0]=y;newcoords[0]=y;colCoords[0]=y;
+	coordinates[0]=z;newcoords[0]=z;colCoords[0]=z;
 	if(cdist>q-4*radius)
 	{
 		escape=true;
@@ -76,6 +51,33 @@ mainP::mainP(double x,double y, double z, double ms, double rad, double centerra
 ///////////////////////////////////////////////////////////////////////////////////
 // Protein member functions
 ///////////////////////////////////////////////////////////////////////////////////
+void protein::setup(vector<double> pos)
+{
+	double mag2=0;
+	for(int i=0;i<3;i++)
+	{
+		coordinates[i]=pos[i];
+		newcoords[i]=pos[i];
+		colCoords[i]=pos[i];
+	}
+
+	for(int i=0;i<3;i++)
+	{
+		mag2+=coordinates[i]*coordinates[i];
+		if(abs(coordinates[i]-L)<cut){Boundaries[i]=true;}
+		else if(abs(coordinates[i]+L)<cut){Boundaries[i+1]=true;}
+	}
+	cdist=pow(mag2,0.5);
+	if(cdist<4*radius)
+	{
+		nearcenter=true;
+	}
+	else
+	{
+		nearcenter=false;
+	}
+}
+
 bool protein::IsNN(protein& other, int index, bool remover, int rindex)
 {
 	bool isNN=false;

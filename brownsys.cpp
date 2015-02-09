@@ -12,45 +12,33 @@ using namespace std;
 //default, one protein system constructor
 brownsys::brownsys()
 {
-
-	Ncr=0;
-	double xx,yy,zz,mag,mag2; // dummies
-	srand (time(NULL));
-	//Generate random point on surface of sphere radius b, centered at origin
-	xx=2*(( (double) rand() / RAND_MAX + 1)-1.5); 
-	yy=2*(( (double) rand() / RAND_MAX + 1)-1.5);
-	zz=2*(( (double) rand() / RAND_MAX + 1)-1.5);
-	mag2=xx*xx+yy*yy+zz*zz;
-	mag=pow(mag2,0.5);
-	xx=b*xx/mag;
-	yy=b*yy/mag;
-	zz=b*zz/mag;
-	main = mainP(xx,yy,zz,M,r,rc);
-	for(int i=0;i<dim;i++){cvel.push_back(0);cpos.push_back(0);}
-	crad=r;
-	cmass=M;
-
-
+	protein blank(rc,1);
+	Ncr=N;
+	for(int i=0;i<N;i++)
+	{
+		crowders.push_back(blank);
+	}
 }
 
 //N protein system constructor
-brownsys::brownsys(int num)
+reaction_sys::reaction_sys()
+	: brownsys()
 {
-	
-	Ncr=num;
+	cout<<"Start const"<<endl;
 	double xx,yy,zz,mag,mag2; // dummies
 	int u,v,w,ran;
-	double n=ceil(pow(num,1.0/3.0));
+	double n=ceil(pow(N,1.0/3.0));
 	int Np=n*n*n; // number of lattice points
-	int dN=Np-num; // number of lattice points which should eventually not contain crowders
+	int dN=Np-N; // number of lattice points which should eventually not contain crowders
 	double l=2*L/n; // cubic lattice spacing
 	vector< int > rem(dN-1);
 	events.push_back(false); events.push_back(false); centered=true;
+	cout<<"declared and pushed events"<<endl;
 
 	for(int i=0;i<dim;i++){cvel.push_back(0);cpos.push_back(0);ncpos.push_back(0);}
 	crad=r;
 	cmass=M;
-
+	cout<<"set up center pos and vel"<<endl;
 	
 	//initiate random int generator
 	random_device rd;
@@ -58,7 +46,7 @@ brownsys::brownsys(int num)
 	default_random_engine gen(rd());
 	uniform_int_distribution<int> dist(1,Np); //random ints between 0 and Np
 	//done
-
+	cout<<"init RNG"<<endl;
 
 	//Generate random point on surface of sphere radius b, centered at origin
 	xx=2*(( (double) rand() / RAND_MAX + 1)-1.5); 
@@ -70,7 +58,7 @@ brownsys::brownsys(int num)
 	yy=b*yy/mag;
 	zz=b*zz/mag;
 	main = mainP(xx,yy,zz,1,r,rc); // set mass to one for scale effect
-	
+	cout<<"generated mainP"<<endl;
 
 	//Find indices of lattice point nearest to protein	
 	u=round((xx+L)/l - 0.5);	
@@ -86,46 +74,45 @@ brownsys::brownsys(int num)
 		if (find(rem.begin(), rem.end(), ran) == rem.end()){rem[count]=ran;count++;}
 		
 	}
-	
+	cout<<"made index removal list"<<endl;
 	//Generated
 
-	int numb=1;
-	count=1;
+	int numb=0;
+	count=0;
 	// START COMPLICATED IF PROCESS TO AVOID PROTEIN
-		while(numb<N){
-			for(double k=0;k<n;k++){// k for
-				for(double j=0;j<n;j++){// j for
-	
-					for(double i=0;i<n;i++){// i for
-						if (find(rem.begin(), rem.end(), count) == rem.end()){//check
+	vector<double> Pos(3);
+	while(numb<N){
+		for(double k=0;k<n;k++){// k for
+			for(double j=0;j<n;j++){// j for
+				for(double i=0;i<n;i++){// i for
+					if (find(rem.begin(), rem.end(), count) == rem.end())
+					{//check
 						if(k!=w){// k if
-						xx=l/2.0 + i*l-L;
-						yy=l/2.0 + j*l-L;
-						zz=l/2.0 + k*l-L;
-						crowders.push_back(protein(xx,yy,zz,1,rc));
+						Pos[0]=l/2.0 + i*l-L;
+						Pos[1]=l/2.0 + j*l-L;
+						Pos[2]=l/2.0 + k*l-L;
+						crowders[numb].setup(Pos);
 						numb++;}// end k if
 						else if(j!=v){// j if
-						xx=l/2.0 + i*l-L;
-						yy=l/2.0 + j*l-L;
-						zz=l/2.0 + k*l-L;
-						crowders.push_back(protein(xx,yy,zz,1,rc));
+						Pos[0]=l/2.0 + i*l-L;
+						Pos[1]=l/2.0 + j*l-L;
+						Pos[2]=l/2.0 + k*l-L;
+						crowders[numb].setup(Pos);
 						numb++;}// end j if
 						else if(i!=u){// i if
-						xx=l/2.0 + i*l-L;
-						yy=l/2.0 + j*l-L;
-						zz=l/2.0 + k*l-L;
-						crowders.push_back(protein(xx,yy,zz,1,rc));
+						Pos[0]=l/2.0 + i*l-L;
+						Pos[1]=l/2.0 + j*l-L;
+						Pos[2]=l/2.0 + k*l-L;
+						crowders[numb].setup(Pos);
 						numb++;}// end i if
-					
-						}//end check
-						count++;
-					
-				
-}}}}
-		
-
-
+					}//end check
+					count++;
+				}
+			}
+		}
+	}
 }
+
 
 brownsys::~brownsys()
 {
@@ -139,7 +126,7 @@ brownsys::~brownsys()
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // need getr function for protein class
-void brownsys::startNNs()
+void reaction_sys::startNNs()
 {
 	
 	vector<int> nns;
@@ -197,7 +184,7 @@ void brownsys::startNNs()
 }// ends function
 
 
-void brownsys::updateNNs()
+void reaction_sys::updateNNs()
 {
 	vector<double> pos1, pos2;
 	double dx,dy,dz,mag2,mag,xx,yy,zz;
@@ -317,7 +304,7 @@ void brownsys::updateNNs()
 	} // ends j loop for crowder nearest neighbor update	
 } // ends NNupdate
 
-void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int& betacount)
+void reaction_sys::moveall(mt19937& gen, normal_distribution<> distro, int& betacount)
 {
 	// parameters
 	double t_el=h; // elapsed time
@@ -380,7 +367,7 @@ void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int& betacoun
 	vector<double> pos1=crowders[index].getv
 }*/
 
-void brownsys::cColCheck()
+void reaction_sys::cColCheck()
 {
 	vector<double> pos2;
 	double t_el=h, mag2, mag, R, vdr, r2, rad2, rad, v2,tm,tp;
@@ -436,7 +423,7 @@ void brownsys::cColCheck()
 }
 
 
-void brownsys::moveCrowd(int j ,mt19937& gen, normal_distribution<> distro)
+void reaction_sys::moveCrowd(int j ,mt19937& gen, normal_distribution<> distro)
 {
 	crowders[j].move(gen, distro);
 	vector<double> pos1=crowders[j].getv("new coords"), pos2;
@@ -466,7 +453,7 @@ void brownsys::moveCrowd(int j ,mt19937& gen, normal_distribution<> distro)
 
 }
 
-void brownsys::crColCheck(int j)
+void reaction_sys::crColCheck(int j)
 {
 	bool mcol=false, ccol=false, col=false;
 	vector<double> pos1=crowders[j].getv("new coords");
@@ -554,7 +541,7 @@ void brownsys::crColCheck(int j)
 	}
 }
 
-void brownsys::mainRes(double& t_el, int index, int colSwitch, vector<int> moving_particles)
+void reaction_sys::mainRes(double& t_el, int index, int colSwitch, vector<int> moving_particles)
 {
 	// first move initial particle to its pre-collision location
 	
@@ -836,7 +823,7 @@ void brownsys::mainRes(double& t_el, int index, int colSwitch, vector<int> movin
 	}
 }
 
-void brownsys::upall(vector<int> moving_particles)
+void reaction_sys::upall(vector<int> moving_particles)
 {
 	main.upmain();
 			
@@ -855,7 +842,7 @@ void brownsys::upall(vector<int> moving_particles)
 	
 }
 
-void brownsys::shftcntr()
+void reaction_sys::shftcntr()
 {
 	for(int i=0;i<crowders.size();i++)
 	{
@@ -866,7 +853,7 @@ void brownsys::shftcntr()
 	centered=true;
 }
 
-bool brownsys::ColCheckAll(int& switcher, int& index1, int& index2, vector<int> moving_particles, double& t_el, vector<bool>& condition)
+bool reaction_sys::ColCheckAll(int& switcher, int& index1, int& index2, vector<int> moving_particles, double& t_el, vector<bool>& condition)
 {
 	vector<int> nns;
 	vector<double> pos2, pos1_o, pos1;
@@ -1236,7 +1223,7 @@ bool brownsys::ColCheckAll(int& switcher, int& index1, int& index2, vector<int> 
 	return col;
 }
 
-bool brownsys::mainColCheck(int& index, double& t_el)
+bool reaction_sys::mainColCheck(int& index, double& t_el)
 {
 
 	vector<int> nns=main.getNNs(true);
@@ -1363,7 +1350,7 @@ bool brownsys::mainColCheck(int& index, double& t_el)
 }
 
 
-void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqsteps)
+void reaction_sys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqsteps)
 {
 	vector<double> pos1(3), pos2(3), posm(3), disp(3), PBCvec(3);
 	vector<int> nns;
@@ -1431,6 +1418,13 @@ void brownsys::printcoords(protein test)
 	cout<<"y= "<<pos[1]<<endl;
 	cout<<"z= "<<pos[2]<<endl;	
 }
+
+///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
+// DIFFUSION CONSTANT STUFF///////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+
 
 
 

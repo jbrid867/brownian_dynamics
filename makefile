@@ -16,3 +16,11 @@ par: test.cpp
 	${CC} -c proteins.cpp ${OMP} 
 	${CC} -c brownsys.cpp ${OMP}
 	${CC} -o run test.o proteins.o brownsys.o ${OMP} 
+
+diff: diffTest.cpp
+	${CC} -c diffTest.cpp ${OMP}
+	${CC} -c proteins.cpp ${OMP} 
+	${CC} -c brownsys.cpp ${OMP}
+	${CC} -c Diffusion.cpp ${OMP}
+	${CC} -o run1 diffTest.o proteins.o brownsys.o Diffusion.o ${OMP}
+

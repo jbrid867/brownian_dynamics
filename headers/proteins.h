@@ -23,14 +23,15 @@ protected:
 
 public:	
 	//CONSTRUCTOR
-	protein(); //default constructor. only contains mass and radius
-	protein(double x,double y, double z, double ms, double rad); 
+	protein(); //default constructor. only makes vectors
+	protein(int Rad, double Mass); 
 	//~protein(); //destructor
 	
 	//Dynamics
 	
 	void move(mt19937& gen, normal_distribution<> distro); // brownian displacement for protein
 	void setpos(vector<double> pos); // sets coords = pos
+	void setup(vector<double> pos); // sets coords=newcoords=pos and updates boundaries stuff
 	void newvel(vector<double> v); // sets velocity
 	void nudge(double t); //moves coords by v*t
 	void update(); // sets coords=newcoords
@@ -71,6 +72,7 @@ private:
 public:
 	mainP();
 	mainP(double x,double y, double z, double ms, double rad, double centerrad);
+	~mainP();
 
 	bool nearEsc();
 	void upmain();
