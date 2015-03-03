@@ -35,10 +35,10 @@ const double M =30000*1.67*pow(10,-27); //protein mass
 const double Mc =30000*1.67*pow(10,-27); //crowder mass
 const double b =3*pow(10,-10); //inner region radius
 const double q =8*pow(10,-10); //outer region radius
-const double phi =0.1; //volume fraction of crowders
+const double phi =0.4; //volume fraction of crowders
 const double L =q; // simulation box size
 const int N=floor(phi*pow(2.0*L,3.0)/((4.0/3.0)*pi*pow(rc,3.0)));
-const double cut=6*rc;
+const double cut=3*rc;
 
 
 const double vrms = pow(3*k*T/M,0.5); //rms velocity

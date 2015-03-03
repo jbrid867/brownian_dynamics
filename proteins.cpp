@@ -671,3 +671,9 @@ void mainP::upmain()
 		escape=false;
 	}
 }
+
+
+bool protein::NNUpdate(protein& other, int index)
+{
+
+}

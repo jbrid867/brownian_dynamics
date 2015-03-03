@@ -57,6 +57,7 @@ private:
 	vector<double> stepvec;
 	int track_index; // tracks the crowder with this index
 	int steps; // number of steps
+	vector< vector< int > > nearest;
 
 public:
 	// constructor
@@ -66,7 +67,7 @@ public:
 	void startNNs(); // builds NN lists
 	void updateNNs(); // updates NN lists, consider using references/pointers
 
-	bool track_check(); // check for tracked colliding with other
+	bool track_check(double& t); // check for tracked colliding with other
 	void collision();
 };
 

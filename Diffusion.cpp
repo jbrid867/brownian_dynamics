@@ -60,42 +60,7 @@ diffusion_sys::diffusion_sys(int s, int track)
 	}
 }
 
-void diffusion_sys::updateNNs()
-{	
-	vector<int> NNs;
-	vector<int> nNNs;
-	int NNnum;
-	int nNNnum;
-	for(int j=0; j<N; j++)
-	{ //STARTS REMOVAL LOOP
 
-		NNs=crowders[j].getNNs(true);
-		nNNs=crowders[j].getNNs(false);
-		NNnum=NNs.size();
-		nNNnum=nNNs.size();
-
-		for(int i=0; i<NNnum; i++) // crowder NN removal loop
-		{	
-			if(!crowders[j].IsNN(crowders[NNs[i]%Ncr],NNs[i]%Ncr,true,i))
-			{
-				nNNs.push_back(NNs[i]%Ncr);
-				NNs.erase(NNs.begin()+i);
-				NNnum-=1;i-=1;
-			}
-		} // ends the i removal loops	
-
-		for(int i=0; i<nNNnum; i++) //CAN MAKE THIS BETTER BY LINKING PARTICLES FOR WHICH IVE ALREADY FOUND NNS
-		{
-			if(crowders[j].IsNN(crowders[nNNs[i]],nNNs[i],false,0))
-			{
-				nNNs.erase(nNNs.begin()+i);
-				nNNnum-=1;i-=1;
-			}
-		} // ends i addition loop
-		crowders[j].setNNs(nNNs);
-	} // ends j loop for crowder nearest neighbor update	
-	cout<<"updated"<<endl;
-} // ends NNupdate
 
 
 
@@ -103,14 +68,15 @@ void diffusion_sys::updateNNs()
 
 void diffusion_sys::dmove(mt19937& gen, normal_distribution<> distro)
 {
-	vector<double> disp(3), vel(3), pos1(3), pos2(3);
+	/*vector<double> disp(3), vel(3), pos1(3), pos2(3);
+	double t;
 	for(int i=0;i<steps;i++)
 	{
 		for(int j=0;j<crowders.size();j++)
 		{
 			crowders[j].move(gen,distro);
 
-			if(j==track_index)
+			if(j==track_index && track_check(t))
 			{
 				//track_check();
 			}
@@ -120,13 +86,36 @@ void diffusion_sys::dmove(mt19937& gen, normal_distribution<> distro)
 			}
 		}
 
-	}
+	}*/
 }
 
-bool track_check()
+/*bool diffusion_sys::track_check(double& t)
 {
-	
-}
+	vector<double> pos, pos1, pos2, vel;
+	vector<int> nns=crowders[track_index].getNNs(true);
+	double del_t, mag2=0, mag, r1,r2;
+	int num=nns.size();
+
+	pos=crowders[track_index].getv("new coords");
+	pos1=crowders[track_index].getv("coords");
+	vel=crowders[track_index].getv("velocity");
+	r1=crowders[track_index].getp("radius");
+	for(int j=0;j<num;j++)
+	{
+		pos2=crowders[index].getv("coords");
+		r2=crowders[index].getp("radius");
+
+		for(int i=0;i<dim;i++)
+		{
+			mag2+=(pos2[i]-pos[i])*(pos2[i]-pos[i]);
+		}
+		mag=pow(mag2,0.5);
+		if(mag<r1+r2)
+		{
+			
+		}
+	}
+}*/
 
 
 
@@ -135,33 +124,293 @@ bool track_check()
 
 void diffusion_sys::startNNs()
 {
+	vector<double> pos1,pos2;
 	vector<int> nns;
 	vector<int> nnns;
+	vector<int> empty(N);
+
 	vector<double> dumby;
-	double xx, yy, zz, x, y, z,mag,mag2;
+	double xx, yy, zz, x, y, z,mag,mag2=0, delta2, d2, dp, dp2, d, costh;
+	vector<vector< bool > >  conditions(2, vector<bool>(6,false));
+	int switcher=0;	
+	double root2=pow(2,0.5);
+	double root3=pow(3,0.5);
+
+	vector<bool> cross(3);
+	bool isNN;
 	
-	bool NN;	
-	
-	
-	
-	for(int u=0; u<N; u++) //can improve by linking. UNFINISHED
+
+	for(int i=0;i<N;i++)
 	{
-		vector<int> nns;
-		vector<int> nnns;
-		dumby=crowders[u].getv("coords");
-		xx=dumby[0];yy=dumby[1];zz=dumby[2];
-		for(int v=0; v<N; v++){NN=false;
-			if(u!=v)
+		pos1=crowders[i].getv("coords");
+		nearest.push_back(empty);
+		for(int k=0;k<6;k++)
+		{
+			conditions[0][k]=crowders[i].NearBound(k);
+		}
+		for(int j=0;j<N;j++)
+		{
+			isNN=false;
+			pos2=crowders[j].getv("coords");
+			mag2=0, d2=0;
+			for(int k=0;k<6;k++)
 			{
-				if(!crowders[u].IsNN(crowders[v],v,false,0))
+				conditions[1][k]=crowders[j].NearBound(k);
+			}
+			cross[0]=((conditions[0][0]==conditions[1][1])||(conditions[0][1]==conditions[1][0]));
+			cross[1]=((conditions[0][2]==conditions[1][3])||(conditions[0][3]==conditions[1][2]));
+			cross[2]=((conditions[0][4]==conditions[1][5])||(conditions[0][5]==conditions[1][4]));
+
+			for(int k=0;k<3;k++)
+			{
+				d2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
+			}
+			d=pow(d2,0.5);
+			if(!cross[0]&&!cross[1]&&!cross[2]) // no boundary
+			{
+				if(pow(d2,0.5)<cut)
 				{
-					nnns.push_back(v);
+					nearest[i][j]=1;
+					isNN=true;
 				}
-			}// end if u!=v			
-		}// end for v
+			}
+			else if(cross[0]&&!cross[1]&&!cross[2]) // across x
+			{
+				delta2=(pos2[1]-pos1[1])*(pos2[1]-pos1[1])+(pos2[2]-pos1[2])*(pos2[2]-pos1[2]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+4*L*L-4*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=2;
+					isNN=true;
+				}
+
+			}
+			else if(!cross[0]&&cross[1]&&!cross[2]) // y
+			{
+				delta2=(pos2[0]-pos1[0])*(pos2[0]-pos1[0])+(pos2[2]-pos1[2])*(pos2[2]-pos1[2]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+4*L*L-4*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=3;
+					isNN=true;
+				}
+			}
+			else if(!cross[0]&&!cross[1]&&cross[2]) //z
+			{
+				delta2=(pos2[1]-pos1[1])*(pos2[1]-pos1[1])+(pos2[0]-pos1[0])*(pos2[0]-pos1[0]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+4*L*L-4*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=4;
+					isNN=true;
+				}
+			}
+			else if(cross[0]&&cross[1]&&!cross[2]) //xy
+			{
+				delta2=(pos2[2]-pos1[2])*(pos2[2]-pos1[2]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+8*L*L-4*root2*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=5;
+					isNN=true;
+				}
+			}
+			else if(cross[0]&&!cross[1]&&cross[2]) //xz
+			{
+				delta2=(pos2[1]-pos1[1])*(pos2[1]-pos1[1]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+8*L*L-4*root2*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=6;
+					isNN=true;
+				}
+			}
+			else if(!cross[0]&&cross[1]&&cross[2]) //yz
+			{
+				delta2=(pos2[0]-pos1[0])*(pos2[0]-pos1[0]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+8*L*L-4*root2*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=7;
+					isNN=true;
+				}
+			}
+			else 
+			{
+				dp=root3*2*L-d;
+				if(dp<cut)
+				{
+					nearest[i][j]=8;
+					isNN=true;
+				}
+			}
+		}
+		if(isNN)
+		{
+			crowders[i].setNNs(nnns);
+			cout<<"there were nearest neighbors"<<endl;
+		}
+	}
 	
-	crowders[u].setNNs(nnns);
-	
-	}// end for u
-	cout<<"NN list created"<<endl;
+cout<<"NN matrix created"<<endl;
+for(int i=0;i<10;i++)
+{
+	for(int j=0;j<10;j++)
+	{
+		cout<<nearest[i][j]<<" ";
+	}
+	cout<<endl;
+}
 }// ends function
+
+void diffusion_sys::updateNNs()
+{	
+	vector<double> pos1,pos2;
+	vector<int> nnns;
+
+	vector<double> dumby;
+	double xx, yy, zz, x, y, z,mag,mag2=0, delta2, d2, dp, dp2, d, costh;
+	vector<vector< bool > >  conditions(2, vector<bool>(6,false));
+	double root2=pow(2,0.5);
+	double root3=pow(3,0.5);
+
+	vector<bool> cross(3);
+	bool isNN, anyNNs;
+	
+
+	for(int i=0;i<N;i++)
+	{
+		anyNNs=false;
+		pos1=crowders[i].getv("coords");
+		for(int k=0;k<6;k++)
+		{
+			conditions[0][k]=crowders[i].NearBound(k);
+		}
+		for(int j=0;j<N;j++)
+		{
+			isNN=false;
+			pos2=crowders[j].getv("coords");
+			mag2=0, d2=0;
+			for(int k=0;k<6;k++)
+			{
+				conditions[1][k]=crowders[j].NearBound(k);
+			}
+			cross[0]=((conditions[0][0]==conditions[1][1])||(conditions[0][1]==conditions[1][0]));
+			cross[1]=((conditions[0][2]==conditions[1][3])||(conditions[0][3]==conditions[1][2]));
+			cross[2]=((conditions[0][4]==conditions[1][5])||(conditions[0][5]==conditions[1][4]));
+
+			for(int k=0;k<3;k++)
+			{
+				d2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
+			}
+			d=pow(d2,0.5);
+			if(!cross[0]&&!cross[1]&&!cross[2]) // no boundary
+			{
+				if(pow(d2,0.5)<cut)
+				{
+					nearest[i][j]=1;
+					isNN=true;
+				}
+			}
+			else if(cross[0]&&!cross[1]&&!cross[2]) // across x
+			{
+				delta2=(pos2[1]-pos1[1])*(pos2[1]-pos1[1])+(pos2[2]-pos1[2])*(pos2[2]-pos1[2]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+4*L*L-4*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=2;
+					isNN=true;
+				}
+
+			}
+			else if(!cross[0]&&cross[1]&&!cross[2]) // y
+			{
+				delta2=(pos2[0]-pos1[0])*(pos2[0]-pos1[0])+(pos2[2]-pos1[2])*(pos2[2]-pos1[2]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+4*L*L-4*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=3;
+					isNN=true;
+				}
+			}
+			else if(!cross[0]&&!cross[1]&&cross[2]) //z
+			{
+				delta2=(pos2[1]-pos1[1])*(pos2[1]-pos1[1])+(pos2[0]-pos1[0])*(pos2[0]-pos1[0]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+4*L*L-4*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=4;
+					isNN=true;
+				}
+			}
+			else if(cross[0]&&cross[1]&&!cross[2]) //xy
+			{
+				delta2=(pos2[2]-pos1[2])*(pos2[2]-pos1[2]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+8*L*L-4*root2*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=5;
+					isNN=true;
+				}
+			}
+			else if(cross[0]&&!cross[1]&&cross[2]) //xz
+			{
+				delta2=(pos2[1]-pos1[1])*(pos2[1]-pos1[1]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+8*L*L-4*root2*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=6;
+					isNN=true;
+				}
+			}
+			else if(!cross[0]&&cross[1]&&cross[2]) //yz
+			{
+				delta2=(pos2[0]-pos1[0])*(pos2[0]-pos1[0]);
+				costh=pow(1-(delta2/d2),0.5);
+				dp2=d2+8*L*L-4*root2*L*d*costh;
+				if(pow(dp2,0.5)<cut)
+				{
+					nearest[i][j]=7;
+					isNN=true;
+				}
+			}
+			else 
+			{
+				dp=root3*2*L-d;
+				if(dp<cut)
+				{
+					nearest[i][j]=8;
+					isNN=true;
+				}
+			}
+			if(!isNN)
+			{
+				nearest[i][j]=0;
+			}
+			else
+			{
+				anyNNs=true;
+			}
+		}
+		if(anyNNs)
+		{
+			crowders[i].setNNs(nnns);
+			cout<<"there were nearest neighbors"<<endl;
+		}
+
+	}
+	
+cout<<"NN matrix updated"<<endl;
+cout<<nearest.size()<<endl;
+} // ends NNupdate
