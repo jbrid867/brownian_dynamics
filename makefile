@@ -3,6 +3,8 @@
 CC = g++ -std=c++0x
 CC1 = icpc -std=c++0x
 OMP = -fopenmp
+NVC = nvcc -arch=sm_20 -c
+NVL = nvcc -lcudart -o
 
 reg: test.cpp
 	${CC} -c test.cpp
@@ -15,4 +17,5 @@ par: test.cpp
 	${CC} -c test.cpp ${OMP}
 	${CC} -c proteins.cpp ${OMP} 
 	${CC} -c brownsys.cpp ${OMP}
-	${CC} -o run test.o proteins.o brownsys.o ${OMP} 
+	${NVC} neighbors.cu
+	${NVL} run test.o proteins.o brownsys.o neighbors.o

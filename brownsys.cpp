@@ -5,6 +5,8 @@
 
 using namespace std;
 
+extern void crowd_build_wrap(float *coords, float params[]);
+
 /////////////////////////////////////////////////////////////////////////////////////////
 ///// CONSTRUCTORS  CONSTRUCTORS  CONSTRUCTORS CONSTRUCTORS........
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -45,6 +47,7 @@ brownsys::brownsys(int num)
 	int dN=Np-num; // number of lattice points which should eventually not contain crowders
 	double l=2*L/n; // cubic lattice spacing
 	vector< int > rem(dN-1);
+	
 	events.push_back(false); events.push_back(false); centered=true;
 
 	for(int i=0;i<dim;i++){cvel.push_back(0);cpos.push_back(0);ncpos.push_back(0);}
@@ -59,7 +62,78 @@ brownsys::brownsys(int num)
 	uniform_int_distribution<int> dist(1,Np); //random ints between 0 and Np
 	//done
 
+	/////////////////////////////////////////////////////////////////////////
+	//GPU IMPLEMENTATION
+	/////////////////////////////////////////////////////////////////////////
+	float * gpu_proteins[(Ncr+1)*3];
+	float * gpu_inBox[Np];
+	float * gpu_boxStart[Np];
+	float * gpu_boxIndexed_list[Ncr];
+	float gpu_main_index=0;
+	vector<int> gpu_rems(dN);
+	int gpu_rem[dN]; // first dN-1 dont dount, dN is the main_index
 
+	int count=0;
+	while(count<dN-1){ // also builds the non-gpu removal list
+		ran=dist(gen);
+		if (find(rem.begin(), rem.end(), ran) == rem.end())
+		{
+			rem[count]=ran;
+			gpu_rems[count]=ran;
+			count++;
+		}
+			
+	}
+	
+	sort(gpu_rems.begin(),gpu_rems.end());
+	gpu_rem[0]=-1;
+	for(int i=0; i<dN; i++){gpu_rem[i+1]=gpu_rems[i];} // sorted the removal list, may only need the vector?
+	cout<<gpu_rem[0]<<" "<<gpu_rem[200]<<endl;
+	count=0;
+	int mod=0;
+	int modder=0;
+
+	/*for(int i=0; i<Np; i++) // build indexing nonsense
+	{
+		if(i!=gpu_rem[mod])
+		{
+			gpu_inBox[i]=1;
+			gpu_boxStart[i]=i+modder;
+			gpu_boxIndexed_list[i+modder]=count; // Count is the final protein index
+			count++;
+		}
+		if(i==gpu_main_index)
+		{
+			gpu_inBox[i]=1;
+			gpu_boxStart[i]=i+modder;
+			gpu_boxIndexed_list[i+modder]=count;
+			count++;
+		}
+		else
+		{
+			gpu_inBox[i]=0;
+			mod++;
+			modder-=1;
+		}
+	}*/
+
+	/*float in[4];
+	in[0]=l;
+	in[1]=L;
+	in[2]=Np;
+	in[3]=n;
+	crowd_build_wrap(gpu_crowds,in);
+	for(int i=0;i<Np;i++)
+	{
+		if(i%100==0)
+		{
+			for(int j=0;j<3;j++){cout<<gpu_crowds[i+j]<<" ";}
+			cout<<endl;
+		}
+	}*/
+	/////////////////////////////////////////////////////////////////////////
+	// End gpu implementation
+	/////////////////////////////////////////////////////////////////////////
 	//Generate random point on surface of sphere radius b, centered at origin
 	xx=2*(( (double) rand() / RAND_MAX + 1)-1.5); 
 	yy=2*(( (double) rand() / RAND_MAX + 1)-1.5);
@@ -78,14 +152,14 @@ brownsys::brownsys(int num)
 	w=round((zz+L)/l - 0.5);	
 	//Indices found
 
-	//Generate indices of lattice points to be removed
+/*	//Generate indices of lattice points to be removed
 	int count=0;
 	while(count<dN-1){
 		ran=dist(gen);
 		
 		if (find(rem.begin(), rem.end(), ran) == rem.end()){rem[count]=ran;count++;}
 		
-	}
+	}*/
 	
 	//Generated
 

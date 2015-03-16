@@ -13,17 +13,13 @@ int main(){
 	mt19937 gen(rd()); // start RNG
 	normal_distribution<> distro(0,pow(2*D*h,0.5));
 
-	#pragma omp parallel for schedule(dynamic) 
-	for(i=0; i<100; i++)
+	
+	for(i=0; i<1; i++)
 	{
 		brownsys baller(N);
-		baller.startNNs();
-		baller.equilibrate(gen,distro,1000);
-		baller.moveall(gen, distro, count);
-		cout<<"beta = "<<(double)(count/(i+1))<<endl;
+		
 
 	}
-	cout<<"final beta = "<<count/1000.0<<endl;
 
 	/*baller.startNNs(cutoff); // NOT FINISHED. ONLY FINDS IF ITS NEAR MAIN
 	baller.NCout();
