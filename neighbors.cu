@@ -29,7 +29,7 @@ __global__ void start_sys(float * coords, int numC)
 
 }*/
 
-__global__ void init_RNG(curandState *rngStates,
+/*__global__ void init_RNG(curandState *rngStates,
 							  const unsigned int seed, int xLen)
 {
 	int Row = blockIdx.y*blockDim.y + threadIdx.y;
@@ -46,9 +46,9 @@ __global__ void rand_gen(curandState *state, float * rands, int xLen, int yLen)
 	int idx=Row*xLen + Col;
 	if(idx<yLen*xLen)
 		rands[idx] = curand_normal(&state[idx]);
-}
+}*/
 
-__global__ void coord_ICs(float *coords, float params[])
+/*__global__ void coord_ICs(float *coords, float params[])
 {
 	float space=params[0], Len=params[1];
 	int N=params[2], n=params[3];
@@ -64,10 +64,10 @@ __global__ void coord_ICs(float *coords, float params[])
 			coords[arrIdx+i]=(indices[i]+0.5)*space - Len;
 		}
 
-}
+}*/
 
 void crowd_build_wrap(float *coords, float params[])
-{
+{/*
 	// params has spacing, total length, N, n = (N)^1/3
 	//N needs to not include the subtracted points yet
 	float *d_coords;
@@ -87,12 +87,12 @@ void crowd_build_wrap(float *coords, float params[])
 	gpuErrchk(cudaDeviceSynchronize());
 	gpuErrchk(cudaMemcpy(coords, d_coords, N*3*sizeof(float), cudaMemcpyDeviceToHost));
 	cudaFree(d_coords);
-	printf("c=%f\n", coords[1]);
+	printf("c=%f\n", coords[1]);*/
 }
 
 void rand_wrapper(int switcher)
 {
-	int seed=(int)time(NULL), xLen=100, yLen=10;
+	/*int seed=(int)time(NULL), xLen=100, yLen=10;
 	curandState *d_state;
 	curandState *state;
 	float *rands;
@@ -122,7 +122,7 @@ void rand_wrapper(int switcher)
 	cudaFree(d_state);
 	cudaFree(d_rands);
 	free(state);
-	free(rands);
+	free(rands);*/
 }
 
 

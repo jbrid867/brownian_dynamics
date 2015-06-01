@@ -17,8 +17,9 @@ int main(){
 	for(i=0; i<1; i++)
 	{
 		brownsys baller(N);
+		cout<<"1";
+		baller.equilibrate(gen, distro, 10000);
 		
-
 	}
 
 	/*baller.startNNs(cutoff); // NOT FINISHED. ONLY FINDS IF ITS NEAR MAIN

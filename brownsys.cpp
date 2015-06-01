@@ -64,35 +64,76 @@ brownsys::brownsys(int num)
 
 	/////////////////////////////////////////////////////////////////////////
 	//GPU IMPLEMENTATION
+	//Totally separate from cpu implementation
 	/////////////////////////////////////////////////////////////////////////
-	float * gpu_proteins[(Ncr+1)*3];
+	/*float * gpu_proteins[(Ncr+1)*5]; // contains coords (xyz), mass and radius
 	float * gpu_inBox[Np];
 	float * gpu_boxStart[Np];
 	float * gpu_boxIndexed_list[Ncr];
+	float * gpu_rem[dN];*/
+	vector<int> gpu_vrem(dN);
 	float gpu_main_index=0;
-	vector<int> gpu_rems(dN);
-	int gpu_rem[dN]; // first dN-1 dont dount, dN is the main_index
-
+	vector<double> gpu_vcoords(Np*3);
+	vector<int> gpu_vboxNum(Np+1);
+	vector<int> gpu_vboxStart(Np+1);
+	vector<int> gpu_vboxIndices(Ncr+1);
+	for(int i=0;i<Np+1;i++)
+	{
+		gpu_vboxNum[i]=1; //There is one protein per box initially.
+		//gpu_vboxStart[i]=i; //Starting location in index array, initially each is in the same box as index. -1 means none
+	} 
 	int count=0;
-	while(count<dN-1){ // also builds the non-gpu removal list
-		ran=dist(gen);
-		if (find(rem.begin(), rem.end(), ran) == rem.end())
-		{
-			rem[count]=ran;
-			gpu_rems[count]=ran;
-			count++;
-		}
-			
+	while(count<dN-1){
+		ran=dist(gen);	
+		if (find(gpu_vrem.begin(), gpu_vrem.end(), ran) == gpu_vrem.end()){gpu_vrem[count]=ran;count++;}
 	}
+	bool done=false;
+	while(!done)
+	{
+		//Generate random point on surface of sphere radius b, centered at origin
+		xx=2*(( (double) rand() / RAND_MAX + 1)-1.5); 
+		yy=2*(( (double) rand() / RAND_MAX + 1)-1.5);
+		zz=2*(( (double) rand() / RAND_MAX + 1)-1.5);
+		mag2=xx*xx+yy*yy+zz*zz;
+		mag=pow(mag2,0.5);
+		xx=b*xx/mag;
+		yy=b*yy/mag;
+		zz=b*zz/mag;
+		
+		u=round((xx+L)/l - 0.5);	
+		v=round((yy+L)/l - 0.5);
+		w=round((zz+L)/l - 0.5);
+		int gpu_main_index=u+n*v+n*n*w;
+		if (find(gpu_vrem.begin(), gpu_vrem.end(), gpu_main_index) == gpu_vrem.end())
+		{
+			gpu_vrem[dN-1]=gpu_main_index;
+			done=true;
+		}
+	}
+	sort(gpu_vrem.begin(), gpu_vrem.end());
 	
-	sort(gpu_rems.begin(),gpu_rems.end());
-	gpu_rem[0]=-1;
-	for(int i=0; i<dN; i++){gpu_rem[i+1]=gpu_rems[i];} // sorted the removal list, may only need the vector?
-	cout<<gpu_rem[0]<<" "<<gpu_rem[200]<<endl;
+	
 	count=0;
 	int mod=0;
 	int modder=0;
-
+	for(int i=0; i<Np+1; i++)
+	{
+		if(i==gpu_vrem[mod] && i!=gpu_main_index)
+		{
+			gpu_vboxNum[i]=0; // there are 0 proteins in these boxes
+			gpu_vboxStart[i]=-1; // when there are 0 proteins, there is no starting index
+			modder-=1;
+			mod++;
+		}
+		else
+		{
+			gpu_vboxStart[i]=i+modder; // index of crowder becomes smaller than box index. box start should initially be the index
+			gpu_vboxIndices[i+modder]=i+modder; // box start should initially be the index
+		}
+	}
+	cout<<gpu_vboxIndices[Ncr]<<endl;
+	cout<<gpu_vrem.size()<<endl;
+	cout<<Ncr<<endl;
 	/*for(int i=0; i<Np; i++) // build indexing nonsense
 	{
 		if(i!=gpu_rem[mod])
@@ -134,7 +175,18 @@ brownsys::brownsys(int num)
 	/////////////////////////////////////////////////////////////////////////
 	// End gpu implementation
 	/////////////////////////////////////////////////////////////////////////
-	//Generate random point on surface of sphere radius b, centered at origin
+
+
+
+
+
+
+
+
+
+
+
+	/*//Generate random point on surface of sphere radius b, centered at origin
 	xx=2*(( (double) rand() / RAND_MAX + 1)-1.5); 
 	yy=2*(( (double) rand() / RAND_MAX + 1)-1.5);
 	zz=2*(( (double) rand() / RAND_MAX + 1)-1.5);
@@ -152,14 +204,14 @@ brownsys::brownsys(int num)
 	w=round((zz+L)/l - 0.5);	
 	//Indices found
 
-/*	//Generate indices of lattice points to be removed
-	int count=0;
+	//Generate indices of lattice points to be removed
+	count=0;
 	while(count<dN-1){
 		ran=dist(gen);
 		
 		if (find(rem.begin(), rem.end(), ran) == rem.end()){rem[count]=ran;count++;}
 		
-	}*/
+	}
 	
 	//Generated
 
@@ -195,10 +247,7 @@ brownsys::brownsys(int num)
 						count++;
 					
 				
-}}}}
-		
-
-
+	}}}}*/
 }
 
 brownsys::~brownsys()
@@ -1447,9 +1496,9 @@ void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqste
 
 	posm=main.getv("coords");
 
-
+	cout<<"2"<<endl;
 	for(int i=0;i<eqsteps;i++) // should be while !equilibrated
-	{
+	{cout<<"eqstep"<<endl;
 	for(int k=0;k<Ncr;k++){counter++;
 		
 		nns=crowders[k].getNNs(true);
