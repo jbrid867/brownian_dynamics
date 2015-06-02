@@ -36,7 +36,8 @@ brownsys::brownsys()
 //N protein system constructor
 brownsys::brownsys(int num)
 {
-	
+	//L=q; THESE MUST
+	//int N=floor(phi*pow(2.0*L,3.0)/((4.0/3.0)*pi*pow(rc,3.0)));
 	Ncr=num;
 	double xx,yy,zz,mag,mag2; // dummies
 	int u,v,w,ran;
@@ -92,37 +93,95 @@ brownsys::brownsys(int num)
 	int numb=1;
 	count=1;
 	// START COMPLICATED IF PROCESS TO AVOID PROTEIN
-		while(numb<N){
-			for(double k=0;k<n;k++){// k for
-				for(double j=0;j<n;j++){// j for
-	
-					for(double i=0;i<n;i++){// i for
-						if (find(rem.begin(), rem.end(), count) == rem.end()){//check
-						if(k!=w){// k if
-						xx=l/2.0 + i*l-L;
-						yy=l/2.0 + j*l-L;
-						zz=l/2.0 + k*l-L;
-						crowders.push_back(protein(xx,yy,zz,1,rc));
-						numb++;}// end k if
-						else if(j!=v){// j if
-						xx=l/2.0 + i*l-L;
-						yy=l/2.0 + j*l-L;
-						zz=l/2.0 + k*l-L;
-						crowders.push_back(protein(xx,yy,zz,1,rc));
-						numb++;}// end j if
-						else if(i!=u){// i if
-						xx=l/2.0 + i*l-L;
-						yy=l/2.0 + j*l-L;
-						zz=l/2.0 + k*l-L;
-						crowders.push_back(protein(xx,yy,zz,1,rc));
-						numb++;}// end i if
-					
-						}//end check
-						count++;
-					
+	while(numb<N){
+		for(double k=0;k<n;k++){// k for
+			for(double j=0;j<n;j++){// j for
+
+				for(double i=0;i<n;i++){// i for
+					if (find(rem.begin(), rem.end(), count) == rem.end()){//check
+					if(k!=w){// k if
+					xx=l/2.0 + i*l-L;
+					yy=l/2.0 + j*l-L;
+					zz=l/2.0 + k*l-L;
+					crowders.push_back(protein(xx,yy,zz,1,rc));
+					numb++;}// end k if
+					else if(j!=v){// j if
+					xx=l/2.0 + i*l-L;
+					yy=l/2.0 + j*l-L;
+					zz=l/2.0 + k*l-L;
+					crowders.push_back(protein(xx,yy,zz,1,rc));
+					numb++;}// end j if
+					else if(i!=u){// i if
+					xx=l/2.0 + i*l-L;
+					yy=l/2.0 + j*l-L;
+					zz=l/2.0 + k*l-L;
+					crowders.push_back(protein(xx,yy,zz,1,rc));
+					numb++;}// end i if
 				
-}}}}
+					}//end check
+					count++;
+				}
+			}
+		}
+	}
+}
+
+brownsys::brownsys(int num, bool dumby) // dumby just lets this be overloaded
+{
+	
+	Ncr=N;
+	double xx,yy,zz,mag,mag2; // dummies
+	int u,v,w,ran;
+	n=ceil(pow(num,1.0/3.0));
+	cout<<"ceiling of nomber per dimension: "<<n<<endl;
+	int Np=n*n*n; // number of lattice points
+	int dN=Np-num; // number of lattice points which should eventually not contain crowders
+	cout<<"lattice points: "<<Np<<" "<<"removed points: "<<dN<<endl;
+	
+
+	l=2*L/(double)n; // cubic lattice spacing
+	cout<<"initial Vc BS "<<Vc<<endl;
+	vector< int > rem(dN);
+	events.push_back(false); events.push_back(false); centered=true;
+
+	for(int i=0;i<dim;i++){cvel.push_back(0);cpos.push_back(0);ncpos.push_back(0);}
+	crad=r;
+	cmass=M;
+
+	
+	//initiate random int generator
+	random_device rd;
+	srand (time(NULL));
+	default_random_engine gen(rd());
+	uniform_int_distribution<int> dist(1,Np); //random ints between 0 and Np
+	//done
+
+	int count=0;
+	while(count<dN){
+		ran=dist(gen);
 		
+		if (find(rem.begin(), rem.end(), ran) == rem.end()){rem[count]=ran;count++;}
+		
+	}
+
+	count=0;
+	int numb=0;
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++){
+			for(int k=0; k<n; k++){
+				if (find(rem.begin(), rem.end(), count) == rem.end()){
+					xx=l/2.0 + i*l-L;
+					yy=l/2.0 + j*l-L;
+					zz=l/2.0 + k*l-L;
+					crowders.push_back(protein(xx,yy,zz,1,rc));
+					numb++;
+				}
+				count++;
+			}
+		}
+	}
+	cout<<"number added: "<<numb<<endl;	
+
 
 
 }
@@ -141,7 +200,6 @@ brownsys::~brownsys()
 // need getr function for protein class
 void brownsys::startNNs()
 {
-	
 	vector<int> nns;
 	vector<int> nnns;
 	vector<double> dumby;
@@ -149,16 +207,18 @@ void brownsys::startNNs()
 	dumby=main.getv("coords");
 	xx=dumby[0];yy=dumby[1];zz=dumby[2];
 	bool NN;	
+	cout<<"crowder size: "<<crowders.size()<<endl;
 	//NNs of main
 	for(int u=0; u<Ncr; u++)
 	{	
+		
 		dumby=crowders[u].getv("coords");
 		x=dumby[0];y=dumby[1];z=dumby[2]; 
 		mag2=x*x+y*y+z*z;
 		mag=pow(mag2,0.5);
 		if(mag<cut){nearcntr.push_back(u);} //NNs of central protein		
 		
-
+		
 		
 		NN=false;
 		mag2=(xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z);
@@ -316,6 +376,32 @@ void brownsys::updateNNs()
 		crowders[j].setNNs(nNNs);
 	} // ends j loop for crowder nearest neighbor update	
 } // ends NNupdate
+
+void brownsys::diff_NNs(bool init) // can this just be brute force?
+{
+	vector<double> pos1(3), pos2(3), diff(3);
+	double mag2,mag;
+	int oneBox, twoBox;
+	cout<<"N before loop "<<N<<endl;
+	for(int i=0;i<N;i++)
+	{
+		cout<<"it thinks l is "<<l<<endl;
+		pos1=crowders[i].getv("coords"); // THIS IS NOT WORKING
+		oneBox=floor((pos1[2]+L)/l)+n*floor((L+pos1[1])/l)+n*n*floor((pos2[0]+L)/l);
+		cout<<oneBox<<endl;
+		for(int j=i; j<Ncr; j++)
+		{
+			pos2=crowders[j].getv("coords");
+			mag2=0; mag=0;
+			for(int k=0; k<3; k++)
+			{
+				mag2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
+			}
+			mag=pow(mag2,0.5);
+
+		}
+	}
+}
 
 void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int& betacount)
 {
@@ -1365,62 +1451,112 @@ bool brownsys::mainColCheck(int& index, double& t_el)
 
 void brownsys::equilibrate(mt19937& gen, normal_distribution<> distro, int eqsteps)
 {
-	vector<double> pos1(3), pos2(3), posm(3), disp(3), PBCvec(3);
-	vector<int> nns;
-	int numnns, count, clashcount=0, counter=0;
-	bool clash;
-	double mag, mag2, r1, r2;
+ 	vector<double> pos1(3), pos2(3), posm(3), disp(3), PBCvec(3);
+ 	vector<int> nns;
+ 	int numnns, count, clashcount=0, counter=0;
+ 	bool clash;
+ 	double mag, mag2, r1, r2;
 
-	posm=main.getv("coords");
+ 	posm=main.getv("coords");
 
 
-	for(int i=0;i<eqsteps;i++) // should be while !equilibrated
-	{
-	for(int k=0;k<Ncr;k++){counter++;
-		
-		nns=crowders[k].getNNs(true);
-		numnns=nns.size();
-		pos1=crowders[k].getv("coords");
-				
+ 	for(int i=0;i<eqsteps;i++) // should be while !equilibrated
+ 	{
+	 	for(int k=0;k<Ncr;k++)
+	 	{counter++;
+			
+	 		nns=crowders[k].getNNs(true);
+	 		numnns=nns.size();
+	 		pos1=crowders[k].getv("coords");
+					
 
-		for(int j=0;j<3;j++){disp[j]=distro(gen); pos1[j]+=disp[j];} //get displacement
-		
-		count=0; mag=0; mag2=0;
-		clash=false;
-		
-		//clash with main
-		for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[i]-posm[i])*(pos1[i]-posm[i]);}
-		mag=pow(mag2,0.5);
-		if(mag<crowders[k].getp("radius")+main.getp("radius")){clash=true;}	
-
-		//clash with center
-		mag=0;mag2=0;
-		for(int dumb=0;dumb<3;dumb++){mag2+=pos1[i]*pos1[i];}
-		mag=pow(mag2,0.5);
-		if(mag<crowders[k].getp("radius")+crad){clash=true;}	
-
-		//clash with crowder
-		while(count<numnns && clash==false)
-		{	
-						
-			mag2=0; mag=0;
-			pos2=crowders[nns[count]%Ncr].PBCswitch(Ncr, nns[count]);
-			//PBCvec = pbc(Ncr, nns[count]); // removed for new PBCswitch function
-
-			for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[dumb]-pos2[dumb])*(pos1[dumb]-pos2[dumb]);} //
+	 		for(int j=0;j<3;j++){disp[j]=distro(gen); pos1[j]+=disp[j];} //get displacement
+			
+			count=0; mag=0; mag2=0;
+			clash=false;
+			
+			//clash with main
+			for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[i]-posm[i])*(pos1[i]-posm[i]);}
 			mag=pow(mag2,0.5);
-			if(mag<crowders[k].getp("radius")+crowders[nns[count]%Ncr].getp("radius"))
-			{clash=true; clashcount++;}
-			else{count++;}
+			if(mag<crowders[k].getp("radius")+main.getp("radius")){clash=true;}	
+
+			//clash with center
+			mag=0;mag2=0;
+			for(int dumb=0;dumb<3;dumb++){mag2+=pos1[i]*pos1[i];}
+			mag=pow(mag2,0.5);
+			if(mag<crowders[k].getp("radius")+crad){clash=true;}	
+
+			//clash with crowder
+			while(count<numnns && clash==false)
+			{	
+							
+				mag2=0; mag=0;
+				pos2=crowders[nns[count]%Ncr].PBCswitch(Ncr, nns[count]);
+				//PBCvec = pbc(Ncr, nns[count]); // removed for new PBCswitch function
+
+				for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[dumb]-pos2[dumb])*(pos1[dumb]-pos2[dumb]);} //
+				mag=pow(mag2,0.5);
+				if(mag<crowders[k].getp("radius")+crowders[nns[count]%Ncr].getp("radius"))
+				{clash=true; clashcount++;}
+				else{count++;}
+			}
+			if(!clash){crowders[k].setpos(pos1);}
+
 		}
-		if(!clash){crowders[k].setpos(pos1);}
-
-
-	}}//ends eqsteps and Ncr for loops
-cout<<"clash count = "<<clashcount<<endl;
-cout<<counter<<endl;
+	}//ends eqsteps and Ncr for loops
+// cout<<"clash count = "<<clashcount<<endl;
+// cout<<counter<<endl;
 }// ends equilibrate function
 
+
+void brownsys::equil_diff(mt19937& gen, normal_distribution<> distro, int eqsteps)
+{
+ 	vector<double> pos1(3), pos2(3), posm(3), disp(3), PBCvec(3);
+ 	vector<int> nns;
+ 	int numnns, count, clashcount=0, counter=0;
+ 	bool clash;
+ 	double mag, mag2, r1, r2;
+
+ 	posm=main.getv("coords");
+
+
+ 	for(int i=0;i<eqsteps;i++) // should be while !equilibrated
+ 	{
+	 	for(int k=0;k<Ncr;k++)
+	 	{counter++;
+			
+	 		nns=crowders[k].getNNs(true);
+	 		numnns=nns.size();
+	 		pos1=crowders[k].getv("coords");
+					
+
+	 		for(int j=0;j<3;j++){disp[j]=distro(gen); pos1[j]+=disp[j];} //get displacement
+			
+			count=0; mag=0; mag2=0;
+			clash=false;
+			
+
+			//clash with crowder
+			while(count<numnns && clash==false)
+			{	
+							
+				mag2=0; mag=0;
+				pos2=crowders[nns[count]%Ncr].PBCswitch(Ncr, nns[count]);
+				//PBCvec = pbc(Ncr, nns[count]); // removed for new PBCswitch function
+
+				for(int dumb=0;dumb<3;dumb++){mag2+=(pos1[dumb]-pos2[dumb])*(pos1[dumb]-pos2[dumb]);} //
+				mag=pow(mag2,0.5);
+				if(mag<crowders[k].getp("radius")+crowders[nns[count]%Ncr].getp("radius"))
+				{clash=true; clashcount++;}
+				else{count++;}
+			}
+			if(!clash){crowders[k].setpos(pos1);}
+
+		}
+	}//ends eqsteps and Ncr for loops
+// cout<<"clash count = "<<clashcount<<endl;
+// cout<<counter<<endl;
+}// ends equilibrate function
 
 
 void brownsys::printcoords(protein test)

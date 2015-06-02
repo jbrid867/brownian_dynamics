@@ -17,27 +17,38 @@ private:
 	vector<double> cvel; //center velocity
 	vector<double> cpos; //center coords before shift
 	vector<double> ncpos; // center newcoords
+	vector<int> boxlist;
 
 	// parameters
 	int Ncr; //number of crowders
 	double crad;
 	double cmass;
 
+	//double L;
+	double l; //lattice spacing
+	//int N;
+	int n;
+
 	// esc/reac stuff
 	vector<bool> events; // contains bools for reaction [0] and escape [1]
 public:
 	// constructors
 	brownsys(); // creates a brownian system with one protein
+	// for reaction
 	brownsys(int num); // creates brownian system with num crowders
+	// for diffusion constant
+	brownsys(int num, bool dumby);
 	~brownsys();
 	
 	// NNs
 	void startNNs(); // builds NN lists
+	void diff_NNs(bool init); // utilizes grid
 	void updateNNs(); // updates NN lists, consider using references/pointers
 
 	// Dynamics
 	void moveall(mt19937& gen, normal_distribution<> distro, int& betacount); //String for equilibration or actual step
 	void equilibrate(mt19937& gen, normal_distribution<> distro, int eqsteps);
+	void equil_diff(mt19937& gen, normal_distribution<> distro, int eqsteps);
 	void upall(vector<int> moving_particles); // coords=newcoords for all
 	
 	// Collisions

@@ -19,13 +19,17 @@
 const double k =1.38*pow(10,-23); //boltzman constant
 const double e = 8.8542*pow(10,-12); //vacuum permittivity
 
-const double r =0.5*pow(10,-10); //protein radius
-const double rc =0.5*pow(10,-10); //crowder radius
+const double r =1; //protein radius
+const double rc =1; //crowder radius all that matters is scale
+
 
 const double eta =0.66*pow(10,-3); //dynamic viscosity of water
 const double pi = 3.1415926535897;
 const double ke=pow(4*pi*e,-1);
 const double T =310; //physiological temperature
+
+const double Vp = (4.0/3.0)*pi*r*r*r;
+const double Vc = (4.0/3.0)*pi*rc*rc*rc;
 
 const double D = k*T/(6*pi*eta*r); //protein diffusion constant
 const double Dc = k*T/(6*pi*rc*eta);//crowder diffusion constant
@@ -36,8 +40,11 @@ const double Mc =30000*1.67*pow(10,-27); //crowder mass
 const double b =3*pow(10,-10); //inner region radius
 const double q =8*pow(10,-10); //outer region radius
 const double phi =0.1; //volume fraction of crowders
-const double L =q; // simulation box size
-const int N=floor(phi*pow(2.0*L,3.0)/((4.0/3.0)*pi*pow(rc,3.0)));
+//const double L =q; // simulation box size for reaction 
+//const int N=floor(phi*pow(2.0*L,3.0)/((4.0/3.0)*pi*pow(rc,3.0)));
+const int N=100; // for diffusion
+const double L=pow(N*Vc/phi,0.333333333); // for diffusion
+
 const double cut=6*rc;
 
 
