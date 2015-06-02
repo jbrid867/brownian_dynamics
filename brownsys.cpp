@@ -5,6 +5,8 @@
 
 using namespace std;
 
+extern void make_NNs(float *coords, float params[]);
+
 /////////////////////////////////////////////////////////////////////////////////////////
 ///// CONSTRUCTORS  CONSTRUCTORS  CONSTRUCTORS CONSTRUCTORS........
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -379,28 +381,24 @@ void brownsys::updateNNs()
 
 void brownsys::diff_NNs(bool init) // can this just be brute force?
 {
-	vector<double> pos1(3), pos2(3), diff(3);
-	double mag2,mag;
-	int oneBox, twoBox;
-	cout<<"N before loop "<<N<<endl;
-	for(int i=0;i<N;i++)
+	float coords[Ncr*3];
+	float NNs[Ncr*10];
+	vector<double> pos(3);
+	for(int i=0;i<Ncr;i++)
 	{
-		cout<<"it thinks l is "<<l<<endl;
-		pos1=crowders[i].getv("coords"); // THIS IS NOT WORKING
-		oneBox=floor((pos1[2]+L)/l)+n*floor((L+pos1[1])/l)+n*n*floor((pos2[0]+L)/l);
-		cout<<oneBox<<endl;
-		for(int j=i; j<Ncr; j++)
+		pos=crowders[i].getv("coords");
+		for(int j=0; j<3; j++)
 		{
-			pos2=crowders[j].getv("coords");
-			mag2=0; mag=0;
-			for(int k=0; k<3; k++)
-			{
-				mag2+=(pos2[k]-pos1[k])*(pos2[k]-pos1[k]);
-			}
-			mag=pow(mag2,0.5);
-
+			coords[3*i+j]=pos[j];
 		}
 	}
+	float params[4];
+	params[0]=l;
+	params[1]=L;
+	params[2]=Ncr;
+	params[3]=n;
+	cout<<"does it get here???"<<endl;
+	make_NNs(coords, params);
 }
 
 void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int& betacount)

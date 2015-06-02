@@ -42,7 +42,7 @@ const double q =8*pow(10,-10); //outer region radius
 const double phi =0.1; //volume fraction of crowders
 //const double L =q; // simulation box size for reaction 
 //const int N=floor(phi*pow(2.0*L,3.0)/((4.0/3.0)*pi*pow(rc,3.0)));
-const int N=100; // for diffusion
+const int N=64; // for diffusion
 const double L=pow(N*Vc/phi,0.333333333); // for diffusion
 
 const double cut=6*rc;
