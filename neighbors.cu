@@ -29,24 +29,7 @@ __global__ void start_sys(float * coords, int numC)
 
 }*/
 
-/*__global__ void init_RNG(curandState *rngStates,
-							  const unsigned int seed, int xLen)
-{
-	int Row = blockIdx.y*blockDim.y + threadIdx.y;
-	int Col = blockIdx.x*blockDim.x + threadIdx.x;
-	unsigned int tid = Row*xLen + Col;
 
-	curand_init(seed+tid, tid, 0, &rngStates[tid]);
-}
-
-__global__ void rand_gen(curandState *state, float * rands, int xLen, int yLen)
-{
-	int Row = blockIdx.y*blockDim.y + threadIdx.y;
-	int Col = blockIdx.x*blockDim.x + threadIdx.x;
-	int idx=Row*xLen + Col;
-	if(idx<yLen*xLen)
-		rands[idx] = curand_normal(&state[idx]);
-}*/
 
 /*__global__ void coord_ICs(float *coords, float params[])
 {
@@ -80,31 +63,88 @@ __global__ void NN_lists(float *coords, int *NNs, int N, int n, float L)
 	int remove_index;
 	bool remove_bool=false, first;
 	
+	__shared__ int coords_mz[300];
+	__shared__ int coords_my[300];
+	__shared__ int coords_mx[300];
+	__shared__ int coords_pz[300];
+	__shared__ int coords_py[300];
+	__shared__ int coords_px[300];
+	if(index<300){
+		coords_mx[index]=coords[index*3]-2*L;
+		coords_my[index]=coords[index*3+1]-2*L;
+		coords_mz[index]=coords[index*3+2]-2*L;
+		coords_px[index]=coords[index*3]+2*L;
+		coords_py[index]=coords[index*3+1]+2*L;
+		coords_pz[index]=coords[index*3+2]+2*L;
+	
 
-	x1=coords[3*index];
-	y1=coords[3*index+1];
-	z1=coords[3*index+2];
+		__syncthreads();
+		
 
-	count=0;
-	for(int i=0; i<N; i++)
-	{	
-		first=true;
-		if(i!=index)
+		x1=coords[3*index];
+		y1=coords[3*index+1];
+		z1=coords[3*index+2];
+
+		count=0;
+		for(int i=0; i<N; i++)
+		{	
+			first=true;
+			if(i!=index)
+			{
+				x2=coords[3*i];
+				y2=coords[3*i+1];
+				z2=coords[3*i+2];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;
+				if(count<10)
+				{
+					NNs[10*index+count]=i;
+					mag2s[count]=mag2;
+					count++;
+				}
+				else
+				{	
+					
+					remove_bool=false;
+					first=true;
+					for(int j=0;j<10;j++)
+					{
+						if(mag2<mag2s[j])
+						{	
+							difference=mag2s[j]-mag2;
+							remove_bool=true;
+							if(first)
+							{
+								remove_index=j;
+								difference2=difference;
+								first=false;
+							}
+							else if(difference<difference2)
+							{
+								remove_index=j;
+								difference2=difference;
+							}
+						}
+					}
+					if(remove_bool)
+					{
+						NNs[10*index+remove_index]=i;
+						mag2s[remove_index]=mag2;
+					}
+				}
+			}
+		}
+
+		for(int i=0;i<N;i++) // check for neigbors through the boundaries. 
 		{
-			x2=coords[3*i];
+			//-x
+			x2=coords_mx[i];
 			y2=coords[3*i+1];
 			z2=coords[3*i+2];
 			dx=x2-x1;dy=y2-y1;dz=z2-z1;
 			mag2=dx*dx+dy*dy+dz*dz;
-			if(count<10)
+			if(i!=index)
 			{
-				NNs[10*index+count]=i;
-				mag2s[count]=mag2;
-				count++;
-			}
-			else
-			{	
-				
 				remove_bool=false;
 				first=true;
 				for(int j=0;j<10;j++)
@@ -128,17 +168,841 @@ __global__ void NN_lists(float *coords, int *NNs, int N, int n, float L)
 				}
 				if(remove_bool)
 				{
-					NNs[10*index+remove_index]=i;
+					NNs[10*index+remove_index]=i+N;
 					mag2s[remove_index]=mag2;
 				}
-			}
+				//-y////////////////////////////////////////////////////////////////
+				////////////////////////////////////////////////////////////////////
+				y2=coords_my[i];
+				x2=coords[3*i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+2*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-z
+				////////////////////////////////////////////////////////////////
+				z2=coords_mz[i];
+				y2=coords[3*i+1];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+3*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+x
+				////////////////////////////////////////////////////////////////
+				z2=coords[3*i+2];
+				x2=coords_px[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+4*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+y
+				////////////////////////////////////////////////////////////////
+				y2=coords_py[i];
+				x2=coords[3*i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+5*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+z
+				////////////////////////////////////////////////////////////////
+				y2=coords[3*i+1];
+				z2=coords_pz[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+6*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+x + y
+				////////////////////////////////////////////////////////////////
+				y2=coords_py[i];
+				x2=coords_px[i];
+				z2=coords[3*i+2];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+7*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+x -y
+				////////////////////////////////////////////////////////////////
+				y2=coords_my[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+8*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-x +y
+				////////////////////////////////////////////////////////////////
+				y2=coords_py[i];
+				x2=coords_mx[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+9*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-x -y
+				////////////////////////////////////////////////////////////////
+				y2=coords_my[i];
+				x2=coords_mx[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+10*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+x +z
+				////////////////////////////////////////////////////////////////
+				y2=coords[3*i+1];
+				x2=coords_px[i];
+				z2=coords_pz[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+11*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+x -z
+				////////////////////////////////////////////////////////////////
+				z2=coords_mz[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+12*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-x +z
+				////////////////////////////////////////////////////////////////
+				x2=coords_mx[i];
+				z2=coords_pz[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+13*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-x -z
+				////////////////////////////////////////////////////////////////
+				x2=coords_mx[i];
+				z2=coords_mz[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+14*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+y +z
+				////////////////////////////////////////////////////////////////
+				y2=coords_py[i];
+				x2=coords[3*i];
+				z2=coords_pz[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+15*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+y -z
+				////////////////////////////////////////////////////////////////
+				z2=coords_mz[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+16*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-y +z
+				////////////////////////////////////////////////////////////////
+				y2=coords_my[i];
+				z2=coords_pz[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+17*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-y -z
+				////////////////////////////////////////////////////////////////
+				z2=coords_mz[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+18*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+x+y+z
+				////////////////////////////////////////////////////////////////
+				z2=coords_pz[i];
+				y2=coords_py[i];
+				x2=coords_px[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+19*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-x-y-z
+				////////////////////////////////////////////////////////////////
+				z2=coords_mz[i];
+				y2=coords_my[i];
+				x2=coords_mx[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+20*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+x-y-z
+				////////////////////////////////////////////////////////////////
+				x2=coords_px[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+21*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-x+y-z
+				////////////////////////////////////////////////////////////////
+				x2=coords_mx[i];
+				y2=coords_py[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+22*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-x-y+z
+				////////////////////////////////////////////////////////////////
+				z2=coords_pz[i];
+				y2=coords_my[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+23*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+x+y-z
+				////////////////////////////////////////////////////////////////
+				z2=coords_mz[i];
+				y2=coords_py[i];
+				x2=coords_px[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+24*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//+x-y+z
+				////////////////////////////////////////////////////////////////
+				z2=coords_pz[i];
+				y2=coords_my[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+25*N;
+					mag2s[remove_index]=mag2;
+				}
+				////////////////////////////////////////////////////////////////
+				//-x+y+z
+				////////////////////////////////////////////////////////////////
+				x2=coords_mx[i];
+				y2=coords_py[i];
+				dx=x2-x1;dy=y2-y1;dz=z2-z1;
+				mag2=dx*dx+dy*dy+dz*dz;		
+				remove_bool=false;
+				first=true;
+				for(int j=0;j<10;j++)
+				{
+					if(mag2<mag2s[j])
+					{	
+						difference=mag2s[j]-mag2;
+						remove_bool=true;
+						if(first)
+						{
+							remove_index=j;
+							difference2=difference;
+							first=false;
+						}
+						else if(difference<difference2)
+						{
+							remove_index=j;
+							difference2=difference;
+						}
+					}
+				}
+				if(remove_bool)
+				{
+					NNs[10*index+remove_index]=i+26*N;
+					mag2s[remove_index]=mag2;
+				}
+			}			
 		}
 	}
 }
 
 
-
-void make_NNs(float *coords, float params[])
+void make_NNs(float *coords, int *NN, float params[])
 {
 	printf("how about here????");
 	float space=params[0];
@@ -147,28 +1011,28 @@ void make_NNs(float *coords, float params[])
 
 	float *device_coords;
 	int *device_NNs; // store X neighbors per crowder?
-	int *system_NNs;
+	//int *system_NNs;
 	int gridsize=ceil(pow(N,0.5));
 	cudaMalloc((void **) &device_coords, N*3*sizeof(float));
 	cudaMalloc((void **) &device_NNs, N*10*sizeof(int));
 
 	cudaMemcpy(device_coords, coords, N*3*sizeof(float), cudaMemcpyHostToDevice);
-	system_NNs=(int *)malloc(10*N*sizeof(int));
+	//system_NNs=(int *)malloc(10*N*sizeof(int));
 
 	dim3 Grid(gridsize, gridsize, 1);
 	dim3 Blocks(16,16);
 
-	NN_lists<<<Grid, Blocks>>>(device_coords, device_NNs, N, n, length);
-	cudaMemcpy(system_NNs, device_NNs, N*10*sizeof(int), cudaMemcpyDeviceToHost);
+	NN_lists<<<1, N>>>(device_coords, device_NNs, N, n, length);
+	cudaMemcpy(NN, device_NNs, N*10*sizeof(int), cudaMemcpyDeviceToHost);
 
-	printf("Crowder #21's nearest neighbors are\n");
+	printf("Crowder #1's nearest neighbors are\n");
+	
 	for(int i=0;i<10;i++)
 	{
-		printf("%i\n", system_NNs[210+i]);
-	}
-
-	// cudaFree(device_coords);
-	// cudaFree(device_NNs);
+		printf("%i\n", NN[i]);
+	}	
+	cudaFree(device_coords);
+	cudaFree(device_NNs);
 }
 
 
@@ -197,39 +1061,71 @@ void crowd_build_wrap(float *coords, float params[])
 	printf("c=%f\n", coords[1]);*/
 }
 
-void rand_wrapper(int switcher)
+__global__ void init_RNG(curandState *rngStates,
+							  const unsigned int seed, int n)
 {
-	/*int seed=(int)time(NULL), xLen=100, yLen=10;
+	int Row = blockIdx.y*blockDim.y + threadIdx.y;
+	int Col = blockIdx.x*blockDim.x + threadIdx.x;
+	unsigned int tid = Row*n + Col;
+
+	curand_init(seed+tid, tid, 0, &rngStates[tid]);
+}
+
+__global__ void rand_gen(curandState *state, float * rands, int n, float sigma)
+{
+	int Row = blockIdx.y*blockDim.y + threadIdx.y;
+	int Col = blockIdx.x*blockDim.x + threadIdx.x;
+	int idx=Row*n + Col;
+	float x,y,z,mag2=0,mag, random;
+	if(idx<n*n)
+	{
+		random = curand_normal(&state[idx]);
+		random=random*sigma;
+		x=curand_uniform(&state[idx]);
+		y=curand_uniform(&state[idx]);
+		z=curand_uniform(&state[idx]);
+		mag2=x*x+y*y+z*z;
+		mag=sqrt(mag2);
+		x=x/mag;y=y/mag;z=z/mag;
+		rands[3*idx]=x*random;
+		rands[3*idx+1]=y*random;
+		rands[3*idx+2]=z*random;
+	}
+}
+
+void rand_wrapper(int num, float *steparr, float sigma)
+{
+	int seed=(int)time(NULL);
 	curandState *d_state;
 	curandState *state;
-	float *rands;
-	float *d_rands;
+	int n = ceil(pow(num,0.5));
+	//float *rands;
+	float *d_steps;
 
-	rands=(float *)malloc(xLen*yLen*sizeof(float));
-	state=(curandState *)malloc(xLen*yLen*sizeof(curandState));
-
-
-	cudaMalloc((void **)&d_state, xLen*yLen*sizeof(curandState));
-	cudaMalloc((void **)&d_rands, xLen*yLen*sizeof(float));
-
-	cudaMemcpy(d_rands, rands, xLen*yLen*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_state, state, xLen*yLen*sizeof(curandState), cudaMemcpyHostToDevice);
+	//rands=(float *)malloc(xLen*yLen*sizeof(float));
+	state=(curandState *)malloc(num*sizeof(curandState));
 
 
+	cudaMalloc((void **)&d_state, num*sizeof(curandState));
+	cudaMalloc((void **)&d_steps, 3*num*sizeof(float));
 
-	dim3 Grid((xLen-1)/32 + 1, (yLen-1)/32 +1);
+	cudaMemcpy(d_steps, steparr, 3*num*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(d_state, state, num*sizeof(curandState), cudaMemcpyHostToDevice);
+
+
+
+	dim3 Grid((n/32) + 1, (n/32) + 1);
 	dim3 Blocks(32,32) ;
-	init_RNG<<<Grid,Blocks>>>(d_state, seed, xLen);
-	cudaMemcpy(state, d_state, xLen*yLen*sizeof(curandState), cudaMemcpyDeviceToHost);
-	rand_gen<<<Grid,Blocks>>>(d_state, d_rands, xLen, yLen);
-	cudaMemcpy(rands, d_rands, xLen*yLen*sizeof(float), cudaMemcpyDeviceToHost);
-	for(int i=0;i<xLen*yLen;i+=10)
-		printf("random number %d is %f.\n",i,rands[i]);
+	init_RNG<<<Grid,Blocks>>>(d_state, seed, n);
+	cudaMemcpy(state, d_state, num*sizeof(curandState), cudaMemcpyDeviceToHost);
+	rand_gen<<<Grid,Blocks>>>(d_state, d_steps, n, sigma);
+	cudaMemcpy(steparr, d_steps, 3*num*sizeof(float), cudaMemcpyDeviceToHost);
+	for(int i=0;i<3*num;i+=10)
+		printf("random number %d is %f.\n",i,steparr[i]);
 
 	cudaFree(d_state);
-	cudaFree(d_rands);
+	cudaFree(d_steps);
 	free(state);
-	free(rands);*/
 }
 
 

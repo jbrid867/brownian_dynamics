@@ -5,7 +5,8 @@
 
 using namespace std;
 
-extern void make_NNs(float *coords, float params[]);
+extern void make_NNs(float *coords, int *NN, float params[]);
+extern void rand_wrapper(int num, float *steparr, float sigma);
 
 /////////////////////////////////////////////////////////////////////////////////////////
 ///// CONSTRUCTORS  CONSTRUCTORS  CONSTRUCTORS CONSTRUCTORS........
@@ -382,7 +383,7 @@ void brownsys::updateNNs()
 void brownsys::diff_NNs(bool init) // can this just be brute force?
 {
 	float coords[Ncr*3];
-	float NNs[Ncr*10];
+	//int *NNs[Ncr*10];
 	vector<double> pos(3);
 	for(int i=0;i<Ncr;i++)
 	{
@@ -398,7 +399,14 @@ void brownsys::diff_NNs(bool init) // can this just be brute force?
 	params[2]=Ncr;
 	params[3]=n;
 	cout<<"does it get here???"<<endl;
-	make_NNs(coords, params);
+	NNs[0]=1111111;
+	cout<<"NNs[0] = "<<NNs[0]<<endl;
+	make_NNs(coords, (int *)NNs, params);
+	cout<<"NNs[0] = "<<NNs[0]<<endl;
+	float sigma=sqrt(2*pi*h*D);
+	rand_wrapper(N*10, (float *)steps, sigma);
+	cout<<"an element of steps is "<<steps[0]<<endl;
+
 }
 
 void brownsys::moveall(mt19937& gen, normal_distribution<> distro, int& betacount)

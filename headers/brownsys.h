@@ -18,6 +18,8 @@ private:
 	vector<double> cpos; //center coords before shift
 	vector<double> ncpos; // center newcoords
 	vector<int> boxlist;
+	int NNs[10*N]; // for diffusion
+	float steps[10*N*3]; //10 steps, 3 coordinates, N particles
 
 	// parameters
 	int Ncr; //number of crowders

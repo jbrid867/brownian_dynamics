@@ -16,7 +16,7 @@
 
 
 
-const double k =1.38*pow(10,-23); //boltzman constant
+const double k =1; //boltzman constant
 const double e = 8.8542*pow(10,-12); //vacuum permittivity
 
 const double r =1; //protein radius
@@ -42,14 +42,14 @@ const double q =8*pow(10,-10); //outer region radius
 const double phi =0.1; //volume fraction of crowders
 //const double L =q; // simulation box size for reaction 
 //const int N=floor(phi*pow(2.0*L,3.0)/((4.0/3.0)*pi*pow(rc,3.0)));
-const int N=64; // for diffusion
+const int N=300; // for diffusion
 const double L=pow(N*Vc/phi,0.333333333); // for diffusion
 
 const double cut=6*rc;
 
 
 const double vrms = pow(3*k*T/M,0.5); //rms velocity
-const double h = 5*pow(10,-14); //time step
+const double h = .000001; //time step
 const int dim=3; //DIMENSION
 #endif
 

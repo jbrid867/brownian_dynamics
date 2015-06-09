@@ -1,0 +1,63 @@
+/////////////////// relevant .cu code (the wrapper)
+void make_NNs(float *coords, int **NN, float params[])
+{
+	float space=params[0];
+	float length=params[1];
+	int N=params[2], n=params[3];
+
+	float *device_coords;
+	int *device_NNs; // store X neighbors per crowder?
+	//int *system_NNs;
+	int gridsize=ceil(pow(N,0.5));
+	cudaMalloc((void **) &device_coords, N*3*sizeof(float));
+	cudaMalloc((void **) &device_NNs, N*10*sizeof(int));
+
+	cudaMemcpy(device_coords, coords, N*3*sizeof(float), cudaMemcpyHostToDevice);
+	//system_NNs=(int *)malloc(10*N*sizeof(int));
+
+	dim3 Grid(gridsize, gridsize, 1);
+	dim3 Blocks(16,16);
+
+	NN_lists<<<1, N>>>(device_coords, device_NNs, N, n, length);
+	cudaMemcpy(NN, device_NNs, N*10*sizeof(int), cudaMemcpyDeviceToHost);
+
+	printf("Crowder #1's nearest neighbors are\n");
+	
+	for(int i=0;i<10;i++)
+	{
+		printf("%n\n", NN[i]);
+	}
+
+	
+
+
+	// cudaFree(device_coords);
+	// cudaFree(device_NNs);
+}
+
+/////////////////////////relevant c++ code
+
+extern void make_NNs(float *coords, int **NN, float params[])
+
+//This is called from main
+void brownsys::diff_NNs(bool init) // can this just be brute force?
+{
+	float coords[Ncr*3];
+	//float NNs[Ncr*10];
+	vector<double> pos(3);
+	for(int i=0;i<Ncr;i++)
+	{
+		pos=crowders[i].getv("coords");
+		for(int j=0; j<3; j++)
+		{
+			coords[3*i+j]=pos[j];
+		}
+	}
+	float params[4];
+	params[0]=l;
+	params[1]=L;
+	params[2]=Ncr;
+	params[3]=n;
+	cout<<"does it get here???"<<endl;
+	make_NNs(coords, (int **)NNs, params);
+}
